@@ -1,0 +1,14 @@
+diff --git a/device/lenovo/k52_e78/ProjectConfig.mk b/device/lenovo/k52_e78/ProjectConfig.mk
+index 2a51274..99ae110 100755
+--- a/device/lenovo/k52_e78/ProjectConfig.mk
++++ b/device/lenovo/k52_e78/ProjectConfig.mk
+@@ -125,7 +125,8 @@ MAXIM_SPEAKER_SUPPORT = no
+ MD32_TOOLCHAIN_MODULE = IPDesigner/12R2.36-64
+ MD5_SIZE = 0x01600000
+ MD5_SMEM_SIZE = 0x00200000
+-MICROTRUST_TEE_SUPPORT = yes
++MICROTRUST_TEE_SUPPORT = no
++TRUSTKERNEL_TEE_SUPPORT = yes
+ MT6280_SUPER_DONGLE = no
+ MTK_2IN1_SPK_SUPPORT = no
+ MTK_2SDCARD_SWAP = no

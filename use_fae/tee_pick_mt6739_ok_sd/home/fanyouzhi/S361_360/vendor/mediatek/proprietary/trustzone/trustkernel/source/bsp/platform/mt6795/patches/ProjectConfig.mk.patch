@@ -1,0 +1,15 @@
+diff --git a/amt6795_evb_m/ProjectConfig.mk b/amt6795_evb_m/ProjectConfig.mk
+index cae7073..1e804d0 100755
+--- a/amt6795_evb_m/ProjectConfig.mk
++++ b/amt6795_evb_m/ProjectConfig.mk
+@@ -589,7 +589,9 @@ MTK_TB_APP_LANDSCAPE_SUPPORT = no
+ MTK_TC1_FEATURE = no
+ MTK_TC7_COMMON_DEVICE_INTERFACE = yes
+ MTK_TEE_CCCI_SECURE_SHARE_MEM_SUPPORT = no
+-MTK_TEE_SUPPORT = no
++#Tk ADD
++MTK_TEE_SUPPORT = yes
++TRUSTKERNEL_TEE_SUPPORT = yes
+ MTK_TELEPHONY_BOOTUP_MODE_SLOT1 = 0
+ MTK_TELEPHONY_BOOTUP_MODE_SLOT2 = 1
+ MTK_TELEPHONY_MODE = 0

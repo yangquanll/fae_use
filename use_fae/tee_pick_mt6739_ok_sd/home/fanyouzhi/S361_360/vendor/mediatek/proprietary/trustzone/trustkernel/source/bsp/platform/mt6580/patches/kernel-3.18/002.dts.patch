@@ -1,0 +1,23 @@
+commit 8837886bdca76cb985523f2eef8e4930f3b1bef7
+Author: git <git@trustkernel.com>
+Date:   Fri May 19 01:18:14 2017 +0800
+
+    002.dts
+
+diff --git a/arch/arm/boot/dts/mt6580.dtsi b/arch/arm/boot/dts/mt6580.dtsi
+index 918fa00..f5bbbe9 100644
+--- a/arch/arm/boot/dts/mt6580.dtsi
++++ b/arch/arm/boot/dts/mt6580.dtsi
+@@ -1435,6 +1435,12 @@
+ 		compatible = "trustonic,mobicore";
+ 		interrupts = <0 151 0x1>;
+ 	};
++
++	tkcore {
++		compatible = "trustkernel,tkcore";
++		interrupts = <0 219 0x1>;
++	};
++
+ 	mt_pmic_regulator {
+ 		compatible = "mediatek,mt_pmic";
+ 		buck_regulators {

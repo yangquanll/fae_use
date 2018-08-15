@@ -1,0 +1,32 @@
+NOTE:
+Since our android project may be different from yours,
+we recommend you use the patches manually acording to your android project.
+
+1. ProjectConfig.mk.patch is applied to device/{oem}/${lunch_target}/ProjectConfig.mk.
+    E.g, for the mt6755 platform, ProjectConfig.mk is patched on
+    device/mediatek/evb6755_64_teei/ProjectConfig.mk
+
+2. init.rc.patch is applied to multiple files in device/${chip_manufacture}/${platform},
+    E.g, for the MT6755 platform, init.rc.patch is applied to device/mediatek/mt6755
+
+3. device.mk.patch is applied to device/${chip_manufacture}/${platform}/device.mk
+    E.g, for the MT6755 platform device, device.mk.patch is patched on device/mediatek/mt6755/device.mk
+
+4. file_contexts.patch is applied to device/${chip_manufacture}/common/sepolicy/file_contexts,
+    E.g, for the MT6755 platform device, file_contexts.patch is patched on device/mediatek/mt6755/file_contexts
+
+5. atf.patch is applied to vendor/mediatek/proprietary/trustzone/atf
+
+6. preloader.patch is applied to vendor/mediatek/proprietary/bootable/bootloader/preloader
+
+7. kernel-3.18.patch is applied to kernel-3.18
+   1. mv ${sourse}/tkcoredrv kernel-3.18/drivers/misc/mediatek/tkcore
+   2. add fingerpint driver into kernel-3.18/drivers/misc/mediatek/fingerprint
+      make sure the patch is consisten with the path in patch
+diff -Nr a/kernel-3.18/drivers/misc/mediatek/Makefile b/kernel-3.18/drivers/misc/mediatek/Makefile
+206a207,208
+> obj-$(CONFIG_TRUSTKERNEL_TEE_SUPPORT) += tkcore/
+> obj-y += fingerprint/
+   3. apply the kernel-3.18.patch to kernel-3.18
+
+8. custom_build.patch is applied to vendor/mediatek/proprietary/trustzone/custom/build

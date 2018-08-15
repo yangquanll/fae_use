@@ -1,0 +1,4 @@
+type ifaa, domain;
+type ifaa_exec, exec_type, file_type;
+
+type ifaa_service, service_manager_type;

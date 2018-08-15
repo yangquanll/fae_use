@@ -1,0 +1,12 @@
+
+NOTICE:
+Must update version number in include/version.h once modified.
+
+
+How to compile:
+1. Copy the newest libs from NDK part when compile:
+cp ../libs/libs . -r
+
+2. Put this entire folder to Android Project sub folder,
+like vendor/mediatek/proprietary/trustzone/trustkernel/source/external/AndroidServices, for instance.
+

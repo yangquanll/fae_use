@@ -1,0 +1,13 @@
+diff --git a/drivers/misc/mediatek/irq/mt6580/irq.c b/drivers/misc/mediatek/irq/mt6580/irq.c
+index 977662a..342414e 100644
+--- a/drivers/misc/mediatek/irq/mt6580/irq.c
++++ b/drivers/misc/mediatek/irq/mt6580/irq.c
+@@ -1146,6 +1146,8 @@ static void fiq_isr(struct fiq_glue_handler *h, void *regs, void *svc_sp)
+ #ifdef CONFIG_TRUSTY_WDT_FIQ_ARMV7_SUPPORT
+ 	(irqs_to_fiq[0].handler)(irqs_to_fiq[0].arg, regs, svc_sp);
+ 
++#elif CONFIG_TRUSTKERNEL_TEE_SUPPORT
++	(irqs_to_fiq[0].handler)(irqs_to_fiq[0].arg, regs, svc_sp);
+ #else
+ 	unsigned int iar, irq;
+ 	int cpu, i;

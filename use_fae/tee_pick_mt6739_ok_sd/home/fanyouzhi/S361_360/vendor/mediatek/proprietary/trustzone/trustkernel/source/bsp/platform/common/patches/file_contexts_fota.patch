@@ -1,0 +1,31 @@
+diff --git a/mediatek/sepolicy/bsp/non_plat/file_contexts b/mediatek/sepolicy/bsp/non_plat/file_contexts
+index ded9bd1..486f66b 100644
+--- a/mediatek/sepolicy/bsp/non_plat/file_contexts
++++ b/mediatek/sepolicy/bsp/non_plat/file_contexts
+@@ -41,6 +41,26 @@
+ /dev/socket/wo_epdg_sim(/.*)? u:object_r:wo_epdg_sim_socket:s0
+ /dev/socket/wo_epdg_ipsec(/.*)? u:object_r:wo_epdg_ipsec_socket:s0
+ 
++
++####################################################
++# TrustKernel add start
++/dev/tkcoredrv u:object_r:tkcore_admin_device:s0
++/data/tee(/.*)? u:object_r:tkcore_data_file:s0
++/vendor/bin/teed u:object_r:tkcore_exec:s0
++/system/vendor/bin/teed u:object_r:tkcore_exec:s0
++/protect_f/tee(/.*)? u:object_r:tkcore_data_file:s0
++/vendor/protect_f/tee(/.*)? u:object_r:tkcore_data_file:s0
++/vendor/app/t6(/.*)? u:object_r:tkcore_systa_dir:s0
++/system/vendor/app/t6(/.*)? u:object_r:tkcore_systa_dir:s0
++/data/tee/t6(/.*)? u:object_r:tkcore_spta_dir:s0
++/data/teec.log u:object_r:tkcore_log_file:s0
++/data/tee/tkcore.log u:object_r:tkcore_log_file:s0
++/dev/block/platform/mtk-msdc\.0/[0-9]+\.(msdc|MSDC)0/by-name/sdrpmb u:object_r:tkcore_block_device:s0
++/dev/block/platform/bootdevice/by-name/sdrpmb u:object_r:tkcore_block_device:s0
++################################################
++# TrustKernel add end
++
++
+ #############################
+ # sysfs files
+ #

@@ -1,0 +1,9 @@
+diff --git a/ueventd.mt6797.rc b/ueventd.mt6797.rc
+index 55c85de..bedcdd1 100644
+--- a/ueventd.mt6797.rc
++++ b/ueventd.mt6797.rc
+@@ -116,3 +116,4 @@
+ #MTK In-House TEE
+ /dev/ttyACM0              0660   radio      radio
+ */
++/dev/tkcoredrv            0666   root       root

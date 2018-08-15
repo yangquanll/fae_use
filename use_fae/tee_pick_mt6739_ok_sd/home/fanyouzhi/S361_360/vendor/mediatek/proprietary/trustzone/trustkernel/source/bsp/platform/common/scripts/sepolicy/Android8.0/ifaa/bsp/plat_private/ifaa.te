@@ -1,0 +1,19 @@
+typeattribute ifaa coredomain, mlstrustedobject;
+
+init_daemon_domain(ifaa)
+
+typeattribute ifaa_service mlstrustedobject;
+
+allow ifaa ifaa_service:service_manager add;
+
+allow ifaa servicemanager:binder { call transfer };
+
+allow servicemanager ifaa:dir search;
+allow servicemanager ifaa:file { read open };
+allow servicemanager ifaa:process getattr;
+
+allow untrusted_app ifaa_service:service_manager find;
+allow untrusted_app ifaa:binder call;
+
+allow untrusted_app_25 ifaa_service:service_manager find;
+allow untrusted_app_25 ifaa:binder call;

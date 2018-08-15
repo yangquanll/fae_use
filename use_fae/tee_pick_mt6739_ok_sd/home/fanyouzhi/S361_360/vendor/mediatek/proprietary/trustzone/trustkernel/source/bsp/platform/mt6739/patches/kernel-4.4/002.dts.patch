@@ -1,0 +1,23 @@
+commit 78950ef70c90ca3a6fdc767b4d0fa52a60d16d89
+Author: release <release@hct.sh.cn>
+Date:   Tue Oct 17 18:50:06 2017 +0800
+
+    dts
+    
+    Change-Id: Ied23f3cec3f2faa3aa41a70a9e223a39929a9827
+
+diff --git a/arch/arm64/boot/dts/mediatek/mt6739.dtsi b/arch/arm64/boot/dts/mediatek/mt6739.dtsi
+index c2ebcfe..84fe305 100644
+--- a/arch/arm64/boot/dts/mediatek/mt6739.dtsi
++++ b/arch/arm64/boot/dts/mediatek/mt6739.dtsi
+@@ -78,6 +78,10 @@
+ 		compatible = "trustonic,mobicore";
+ 		interrupts = <GIC_SPI 292 IRQ_TYPE_EDGE_RISING>;
+ 	};
++	tkcore {
++               compatible = "trustkernel,tkcore";
++               interrupts = <GIC_SPI 111 IRQ_TYPE_NONE>;
++       };
+ 
+ 	psci {
+ 		compatible = "arm,psci-0.2";

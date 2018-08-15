@@ -1,0 +1,26 @@
+diff --git a/platform/mt6755/src/security/trustzone/tz_init.c b/platform/mt6755/src/security/trustzone/tz_init.c
+index 52c0fa9..e7a0165 100644
+--- a/platform/mt6755/src/security/trustzone/tz_init.c
++++ b/platform/mt6755/src/security/trustzone/tz_init.c
+@@ -79,7 +79,12 @@
+ /**************************************************************************
+  *  MACROS
+  **************************************************************************/
++
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#define TEE_MEM_ALIGNMENT (0x100000)    //1MB Alignment
++#else
+ #define TEE_MEM_ALIGNMENT (0x1000)  //4K Alignment
++#endif
+ 
+ #if CFG_BOOT_ARGUMENT
+ #define bootarg g_dram_buf->bootarg
+@@ -246,7 +251,7 @@ u32 tee_get_load_addr(u32 maddr)
+ 
+     DBG_MSG("%s reserved_addr: 0x%x, reserved_size: 0x%x\n", MOD, tee_secmem_start, tee_secmem_size + ATF_LOG_BUFFER_SIZE);
+ #elif CFG_TRUSTKERNEL_TEE_SUPPORT
+-	limit_addr = 0xC0000000;
++	limit_addr = 0xF0000000;
+ 	tee_secmem_start = (u32)mblock_reserve_ext(&bootarg.mblock_info,
+         (u64)(tee_secmem_size + ATF_LOG_BUFFER_SIZE), (u64)TEE_MEM_ALIGNMENT,
+         limit_addr, 0, "tee-reserved");

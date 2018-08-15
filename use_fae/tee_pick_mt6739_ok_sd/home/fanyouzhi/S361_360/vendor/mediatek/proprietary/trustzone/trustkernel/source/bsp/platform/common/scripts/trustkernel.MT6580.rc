@@ -1,0 +1,9 @@
+on post-fs
+    mkdir /vendor/protect_f/tee
+    chown system system /vendor/protect_f/tee/
+    restorecon /vendor/protect_f/tee
+
+service teed /vendor/bin/teed --systapath /vendor/app/t6  --sdrpmbdev /dev/block/platform/mtk-msdc.0/11120000.msdc0/by-name/sdrpmb  --prot /vendor/protect_f/tee
+	user system
+	group system
+	class core

@@ -1,0 +1,3 @@
+Place org/ifaa under frameworks/base/core/org/
+
+Apply frameworks_base_Android.mk.patch over directory frameworks/base

@@ -1,0 +1,42 @@
+commit 72099a223ab85e005d8c5d94a352d8f68c18fa94
+Author: u <u@trustkernel.com>
+Date:   Wed Apr 25 11:07:53 2018 +0800
+
+    patch for pie
+
+diff --git a/platform/mt6735/src/security/trustzone/tz_init.c b/platform/mt6735/src/security/trustzone/tz_init.c
+index e581f69..bdcdc90 100644
+--- a/platform/mt6735/src/security/trustzone/tz_init.c
++++ b/platform/mt6735/src/security/trustzone/tz_init.c
+@@ -79,7 +79,12 @@
+ /**************************************************************************
+  *  MACROS
+  **************************************************************************/
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#define TEE_MEM_ALIGNMENT (0x100000)  //1MB Alignment
++#else
+ #define TEE_MEM_ALIGNMENT (0x1000)  //4K Alignment
++#endif
++
+ #define TEE_ENABLE_VERIFY (1)
+ 
+ #if CFG_BOOT_ARGUMENT
+@@ -226,6 +231,9 @@ u32 tee_get_load_addr(u32 maddr)
+ #if CFG_MICROTRUST_TEE_SUPPORT
+     limit_addr = 0x60000000; // For 512MB DRAM (0x5e700000).
+ #endif
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++    limit_addr = 0xF0000000;
++#endif
+     tee_secmem_start = (u32)mblock_reserve(&bootarg.mblock_info,
+         (u64)(tee_secmem_size + ATF_LOG_BUFFER_SIZE), (u64)TEE_MEM_ALIGNMENT,
+         limit_addr, RANKMAX);
+@@ -264,7 +272,7 @@ static void tee_sec_config(void)
+ #endif
+ 
+ #if CFG_TRUSTKERNEL_TEE_SUPPORT
+-	/* reserve 16mb for shared memory */
++	/* reserve for shared memory */
+ 	tz_sec_mem_init(tee_entry_addr, secmem_end_addr - TKCORE_SHM_SIZE_LIMIT, SECURE_OS_MPU_REGION_ID);
+ 	DBG_MSG("%s set secure memory protection : 0x%x, 0x%x (%d)\n", MOD, tee_entry_addr,
+ 		secmem_end_addr - TKCORE_SHM_SIZE_LIMIT, SECURE_OS_MPU_REGION_ID);

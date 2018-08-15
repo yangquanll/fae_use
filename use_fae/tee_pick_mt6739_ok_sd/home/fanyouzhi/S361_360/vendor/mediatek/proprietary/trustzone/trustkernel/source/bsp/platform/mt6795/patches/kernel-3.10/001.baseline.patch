@@ -1,0 +1,45 @@
+commit 1566a46ac1192b4224cd896c5592e6dcc0c88f2f
+Author: git <git@trustkernel.com>
+Date:   Fri May 19 00:32:40 2017 +0800
+
+    001.baseline
+
+diff --git a/drivers/misc/mediatek/Kconfig b/drivers/misc/mediatek/Kconfig
+index 952dfca..cec79e0 100755
+--- a/drivers/misc/mediatek/Kconfig
++++ b/drivers/misc/mediatek/Kconfig
+@@ -448,6 +448,7 @@ source "drivers/misc/mediatek/selinux_warning/Kconfig"
+ source "drivers/misc/mediatek/sysenv/Kconfig"
+  
+ source "drivers/misc/mediatek/teei/Kconfig"
++source "drivers/misc/mediatek/tkcore/Kconfig"
+ source "drivers/misc/mediatek/trustzone/Kconfig"
+ source "drivers/misc/mediatek/vow/Kconfig"
+ source "drivers/misc/mediatek/watchpoint/Kconfig"
+diff --git a/drivers/misc/mediatek/Makefile b/drivers/misc/mediatek/Makefile
+index de1f694..a48b784 100755
+--- a/drivers/misc/mediatek/Makefile
++++ b/drivers/misc/mediatek/Makefile
+@@ -166,6 +166,7 @@ endif
+ obj-$(CONFIG_TRUSTONIC_TEE_SUPPORT) += gud/
+ obj-$(CONFIG_TRUSTONIC_TEE_SUPPORT) += secmem/
+ obj-$(CONFIG_MICROTRUST_TEE_SUPPORT) += teei/
++obj-$(CONFIG_TRUSTKERNEL_TEE_SUPPORT) += tkcore/
+ obj-$(CONFIG_MTK_DEBUG_LATCH)	+= debug_latch/
+ obj-$(CONFIG_MTK_DEBUG_TRACER)	+= debug_tracer/
+ obj-$(CONFIG_MTK_WATCHPOINT) += watchpoint/
+diff --git a/drivers/mmc/host/mediatek/Makefile b/drivers/mmc/host/mediatek/Makefile
+index 405d6f4..d033139 100644
+--- a/drivers/mmc/host/mediatek/Makefile
++++ b/drivers/mmc/host/mediatek/Makefile
+@@ -33,6 +33,10 @@ ccflags-y += -I$(srctree)/drivers/mmc/host/mediatek/rpmb/drrpmb_gp/public
+ ccflags-y += -I$(srctree)/drivers/mmc/host/mediatek/rpmb/tlrpmb/public
+ endif
+ 
++ifeq ($(CONFIG_TRUSTKERNEL_TEE_SUPPORT),y)
++ccflags-y += -I$(srctree)/drivers/misc/mediatek/tkcore/include/linux
++endif
++
+ ccflags-y += -I$(srctree)
+ ccflags-y += -I$(srctree)/drivers/mmc/host/mediatek/$(MTK_PLATFORM)
+ obj-$(CONFIG_MMC_MTK) += emmc_rpmb.o

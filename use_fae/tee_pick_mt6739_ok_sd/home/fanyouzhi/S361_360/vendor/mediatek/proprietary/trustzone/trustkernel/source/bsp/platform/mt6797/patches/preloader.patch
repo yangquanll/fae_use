@@ -1,0 +1,311 @@
+diff --git a/Makefile b/Makefile
+index 4efc501..e829877 100644
+--- a/Makefile
++++ b/Makefile
+@@ -452,6 +452,7 @@ show_feature:
+ 	echo 'CFG_TEE_SUPPORT'= $(CFG_TEE_SUPPORT) ; \
+ 	echo 'CFG_TRUSTONIC_TEE_SUPPORT'= $(CFG_TRUSTONIC_TEE_SUPPORT) ; \
+ 	echo 'CFG_MICROTRUST_TEE_SUPPORT'= $(CFG_MICROTRUST_TEE_SUPPORT) ; \
++	echo 'CFG_TRUSTKERNEL_TEE_SUPPORT'= $(CFG_TRUSTKERNEL_TEE_SUPPORT) ; \
+ 	echo 'CFG_TEE_SECURE_MEM_PROTECTED'= $(CFG_TEE_SECURE_MEM_PROTECTED) ; \
+ 	echo 'CFG_TEE_TRUSTED_APP_HEAP_SIZE'= $(CFG_TEE_TRUSTED_APP_HEAP_SIZE) ; \
+ 	echo 'MTK_EFUSE_WRITER_SUPPORT'= $(MTK_EFUSE_WRITER_SUPPORT) ; \
+diff --git a/custom/even6797_6c_m/cust_bldr.mak b/custom/even6797_6c_m/cust_bldr.mak
+index 1f48a25..4611499 100644
+--- a/custom/even6797_6c_m/cust_bldr.mak
++++ b/custom/even6797_6c_m/cust_bldr.mak
+@@ -16,5 +16,6 @@ CFG_UART_LOG :=UART1
+ CFG_UART_META :=UART1
+ 
+ CFG_CPU_FAST_FREQ :=0
+-CFG_MICROTRUST_TEE_SUPPORT=1
++CFG_MICROTRUST_TEE_SUPPORT=0
++CFG_TRUSTKERNEL_TEE_SUPPORT=1
+ CFG_TEE_SUPPORT=1
+diff --git a/platform/mt6797/default.mak b/platform/mt6797/default.mak
+index 2918aa9..8344230 100755
+--- a/platform/mt6797/default.mak
++++ b/platform/mt6797/default.mak
+@@ -129,6 +129,7 @@ CFG_ATF_LOG_SUPPORT :=1
+ CFG_TEE_SUPPORT :=0
+ CFG_MICROTRUST_TEE_SUPPORT :=0
+ CFG_TRUSTONIC_TEE_SUPPORT :=0
++CFG_TRUSTKERNEL_TEE_SUPPORT := 1
+ CFG_TEE_SECURE_MEM_PROTECTED :=1
+ CFG_TEE_TRUSTED_APP_HEAP_SIZE := 0xA00000
+ CFG_TEE_SECURE_MEM_SHARED :=0
+diff --git a/platform/mt6797/feature.mak b/platform/mt6797/feature.mak
+index e49fc9a..5a2b136 100755
+--- a/platform/mt6797/feature.mak
++++ b/platform/mt6797/feature.mak
+@@ -478,6 +478,11 @@ C_OPTION += -DCFG_MICROTRUST_TEE_SUPPORT="$(CFG_MICROTRUST_TEE_SUPPORT)"
+ export CFG_MICROTRUST_TEE_SUPPORT
+ endif
+ 
++ifdef CFG_TRUSTKERNEL_TEE_SUPPORT
++C_OPTION += -DCFG_TRUSTKERNEL_TEE_SUPPORT="$(CFG_TRUSTKERNEL_TEE_SUPPORT)"
++export CFG_TRUSTKERNEL_TEE_SUPPORT
++endif
++
+ ifdef CFG_TEE_SECURE_MEM_PROTECTED
+ C_OPTION += -DCFG_TEE_SECURE_MEM_PROTECTED="$(CFG_TEE_SECURE_MEM_PROTECTED)"
+ export CFG_TEE_SECURE_MEM_PROTECTED
+diff --git a/platform/mt6797/makefile.mak b/platform/mt6797/makefile.mak
+index c4e0531..2226845 100755
+--- a/platform/mt6797/makefile.mak
++++ b/platform/mt6797/makefile.mak
+@@ -52,6 +52,12 @@ ifeq ($(CFG_MICROTRUST_TEE_SUPPORT),1)
+ INCLUDE_FILE    += \
+     -I$(MTK_PATH_PLATFORM)/src/security/trustzone/kdflib/inc
+ endif
++
++ifeq ($(CFG_TRUSTKERNEL_TEE_SUPPORT),1)
++INCLUDE_FILE    += \
++    -I$(MTK_PATH_PLATFORM)/src/security/trustzone/kdflib/inc
++endif
++
+ ###################################################################
+ # GCC Compile Options
+ ###################################################################
+diff --git a/platform/mt6797/src/security/trustzone/inc/tz_tkcore.h b/platform/mt6797/src/security/trustzone/inc/tz_tkcore.h
+new file mode 100644
+index 0000000..46de868
+--- /dev/null
++++ b/platform/mt6797/src/security/trustzone/inc/tz_tkcore.h
+@@ -0,0 +1,39 @@
++#ifndef TZ_TKCORE_H
++#define TZ_TKCORE_H
++
++#include "typedefs.h"
++
++#define TKCORE_BOOTCFG_MAGIC   (0x54534958)
++
++#define TEE_ARGUMENT_VERSION   (0x00010000U)
++
++#define TKCORE_SHM_SIZE_LIMIT  (0x400000U)
++
++#define RPMB_KEY_SIZE  32
++
++typedef struct {
++    u32 magic;        // magic value from information 
++    u32 length;       // size of struct in bytes.
++    u64 version;      // Version of structure
++    u64 dRamBase;     // NonSecure DRAM start address
++    u64 dRamSize;     // NonSecure DRAM size
++    u64 secDRamBase;  // Secure DRAM start address
++    u64 secDRamSize;  // Secure DRAM size
++    u64 secIRamBase;  // Secure IRAM base
++    u64 secIRamSize;  // Secure IRam size
++    u64 gic_distributor_base;
++    u64 gic_cpuinterface_base;
++    u32 gic_version;
++    u32 uart_base;
++    u32 total_number_spi;
++    u32 ssiq_number;
++    u64 flags;
++    u8 rpmb_key[RPMB_KEY_SIZE];
++} __attribute__((packed)) tee_arg_t, *tee_arg_t_ptr;
++
++void tkcore_boot_param_prepare(u32 param_addr, u32 tee_entry, 
++    u64 sec_dram_size, u64 dram_base, u64 dram_size);
++
++void tkcore_key_param_prepare(u32 param_addr, u8 *rpmb_key, u32 rpmb_keylen);
++
++#endif
+diff --git a/platform/mt6797/src/security/trustzone/makefile b/platform/mt6797/src/security/trustzone/makefile
+index febec6a..eccce7a 100644
+--- a/platform/mt6797/src/security/trustzone/makefile
++++ b/platform/mt6797/src/security/trustzone/makefile
+@@ -27,6 +27,10 @@ ifeq ($(CFG_MICROTRUST_TEE_SUPPORT),1)
+ MOD_SRC  += tz_teei.c
+ endif
+ 
++ifeq ($(CFG_TRUSTKERNEL_TEE_SUPPORT),1)
++MOD_SRC += tz_tkcore.c
++endif
++
+ ###################################################################
+ # target
+ ###################################################################
+@@ -41,4 +45,9 @@ ifeq ($(CFG_MICROTRUST_TEE_SUPPORT),1)
+ SUBDIRS += kdflib
+ endif
+ 
++ifeq ($(CFG_TRUSTKERNEL_TEE_SUPPORT),1)
++SUBDIRS += kdflib
++endif
++
++
+ include $(COMMON_DIR_MK)
+diff --git a/platform/mt6797/src/security/trustzone/tz_init.c b/platform/mt6797/src/security/trustzone/tz_init.c
+index 35202cd..9676e79 100644
+--- a/platform/mt6797/src/security/trustzone/tz_init.c
++++ b/platform/mt6797/src/security/trustzone/tz_init.c
+@@ -56,6 +56,9 @@
+ #include "tz_teei.h"
+ #include "kdf.h"
+ #endif
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#include "tz_tkcore.h"
++#endif
+ #include "sec_devinfo.h"
+ #include "tz_emi_mpu.h"
+ 
+@@ -196,6 +199,8 @@ u32 tee_get_load_addr(u32 maddr)
+ #else
+ #if CFG_MICROTRUST_TEE_SUPPORT
+     limit_addr = 0xB0000000;
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++    limit_addr = 0xBC000000;
+ #endif
+     tee_secmem_start = (u32)mblock_reserve(&bootarg.mblock_info,
+         (u64)(tee_secmem_size + ATF_LOG_BUFFER_SIZE), (u64)TEE_MEM_ALIGNMENT, 
+@@ -234,11 +239,20 @@ static void tee_sec_config(void)
+ #endif
+ #endif
+ 
++#ifdef CFG_TRUSTKERNEL_TEE_SUPPORT
++    /* reserve 16mb for shared memory */
++    tz_sec_mem_init(tee_entry_addr, secmem_end_addr - TKCORE_SHM_SIZE_LIMIT, SECURE_OS_MPU_REGION_ID);
++    DBG_MSG("!!!!!!!!!!!!!!!!!!!%s set secure memory protection : 0x%x, 0x%x (%d)\n", MOD, tee_entry_addr,
++    secmem_end_addr - TKCORE_SHM_SIZE_LIMIT, SECURE_OS_MPU_REGION_ID);
++    }   
++#else
+     tz_sec_mem_init(tee_entry_addr, secmem_end_addr, SECURE_OS_MPU_REGION_ID);
+     DBG_MSG("%s set secure memory protection : 0x%x, 0x%x (%d)\n", MOD, tee_entry_addr,
+         secmem_end_addr, SECURE_OS_MPU_REGION_ID);
+     }
+ #endif
++
++#endif
+ #endif
+     {
+     u32 atf_dram_addr = BL31_DRAM_BASE;
+@@ -317,6 +331,12 @@ void trustzone_post_init(void)
+         CFG_DRAM_ADDR, platform_memory_size());
+     //prepare the parameter for secure driver here
+     teearg->tee_support = 1;
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++    DBG_MSG("%s come to    tkcore ***  \n", MOD);
++    tkcore_boot_param_prepare(TEE_BOOT_ARG_ADDR, tee_entry_addr, tee_secmem_size,
++        CFG_DRAM_ADDR, platform_memory_size());
++    //prepare the parameter for secure driver here
++    teearg->tee_support = 1;
+ #else //CFG_ATF_SUPPORT
+     teearg->tee_support = 0;
+ #endif
+@@ -343,9 +363,15 @@ void trustzone_post_init(void)
+ 	kdflib_get_msg_auth_key(teearg->hwuid, 16, rpmb_key, KEY_LEN);
+     teei_key_param_prepare(TEE_PARAMETER_ADDR,(u8 *)teearg->hwuid,rpmb_key);
+ #else
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++    u8 rpmb_key[32];
++    kdflib_get_msg_auth_key(teearg->hwuid, 16, rpmb_key, 32);
++    tkcore_key_param_prepare(TEE_BOOT_ARG_ADDR, rpmb_key, 32);
++#else
+     u8 rpmb_key[32];
+     seclib_get_msg_auth_key(teearg->hwuid, 16, rpmb_key, 32);
+ #endif
++#endif
+     mmc_rpmb_set_key(rpmb_key);
+     teearg->tee_rpmb_size = mmc_rpmb_get_size();
+     DBG_MSG("%s TEE RPMB Size : 0x%x\n", MOD, teearg->tee_rpmb_size); 
+diff --git a/platform/mt6797/src/security/trustzone/tz_tkcore.c b/platform/mt6797/src/security/trustzone/tz_tkcore.c
+new file mode 100644
+index 0000000..2e08a3c
+--- /dev/null
++++ b/platform/mt6797/src/security/trustzone/tz_tkcore.c
+@@ -0,0 +1,93 @@
++/* Include header files */
++#include "typedefs.h"
++#include "tz_mem.h"
++#include "uart.h"
++#include "dram_buffer.h"
++
++#include "tz_tkcore.h"
++
++#define MOD "[TZ_TKCORE]"
++
++#define TEE_DEBUG
++#ifdef TEE_DEBUG
++#define DBG_MSG(str, ...) do {print(str, ##__VA_ARGS__);} while(0)
++#else
++#define DBG_MSG(str, ...) do {} while(0)
++#endif
++
++#if CFG_BOOT_ARGUMENT_BY_ATAG
++extern unsigned int g_uart;
++#elif CFG_BOOT_ARGUMENT && !CFG_BOOT_ARGUMENT_BY_ATAG
++#define bootarg g_dram_buf->bootarg
++#endif
++
++void tkcore_boot_param_prepare(u32 param_addr, u32 tee_entry, 
++    u64 sec_dram_size, u64 dram_base, u64 dram_size)
++{
++    tee_arg_t_ptr teearg = (tee_arg_t_ptr) param_addr;
++
++    if (teearg == NULL) {
++        return;
++    }
++
++    /* Prepare TEE boot parameters */
++    teearg->magic = TKCORE_BOOTCFG_MAGIC;
++    teearg->length = sizeof(tee_arg_t);
++    teearg->version = (u64) TEE_ARGUMENT_VERSION;
++    teearg->dRamBase = dram_base;
++    teearg->dRamSize = dram_size;
++    teearg->secDRamBase = tee_entry;
++    teearg->secDRamSize = sec_dram_size;
++    teearg->secIRamBase = TEE_SECURE_ISRAM_ADDR;
++    teearg->secIRamSize = TEE_SECURE_ISRAM_SIZE;
++
++    /* GIC parameters */
++    teearg->total_number_spi = 352;
++    /* SSI Reserve */
++    teearg->ssiq_number = 32 + 296;
++
++    teearg->flags = 0;
++
++#if CFG_BOOT_ARGUMENT_BY_ATAG
++    teearg->uart_base = g_uart;
++    DBG_MSG("%s teearg : CFG_BOOT_ARGUMENT_BY_ATAG 0x%x\n", __func__, g_uart);
++#elif CFG_BOOT_ARGUMENT && !CFG_BOOT_ARGUMENT_BY_ATAG
++    teearg->uart_base = bootarg.log_port;
++    DBG_MSG("%s teearg : CFG_BOOT_ARGUMENT 0x%x\n", __func__, bootarg.log_port);
++#else
++    teearg->uart_base = CFG_UART_LOG;
++    DBG_MSG("%s teearg : log port by prj cfg 0x%x\n", __func__, CFG_UART_LOG);
++#endif
++
++    DBG_MSG("%s teearg.magic: 0x%x\n", MOD, teearg->magic);
++    DBG_MSG("%s teearg.length: 0x%x\n", MOD, teearg->length);
++    DBG_MSG("%s teearg.version: 0x%x\n", MOD, teearg->version);
++    DBG_MSG("%s teearg.dRamBase: 0x%x\n", MOD, teearg->dRamBase);
++    DBG_MSG("%s teearg.dRamSize: 0x%x\n", MOD, teearg->dRamSize);
++    DBG_MSG("%s teearg.secDRamBase: 0x%x\n", MOD, teearg->secDRamBase);
++    DBG_MSG("%s teearg.secDRamSize: 0x%x\n", MOD, teearg->secDRamSize);
++    DBG_MSG("%s teearg.secIRamBase: 0x%x\n", MOD, teearg->secIRamBase);
++    DBG_MSG("%s teearg.secIRamSize: 0x%x\n", MOD, teearg->secIRamSize);
++    DBG_MSG("%s teearg.gic_dist_base: 0x%x\n", MOD, teearg->gic_distributor_base);
++    DBG_MSG("%s teearg.gic_cpu_base: 0x%x\n", MOD, teearg->gic_cpuinterface_base);
++    DBG_MSG("%s teearg.gic_version: 0x%x\n", MOD, teearg->gic_version);
++    DBG_MSG("%s teearg.uart_base: 0x%x\n", MOD, teearg->uart_base);
++    DBG_MSG("%s teearg.total_number_spi: %d\n", MOD, teearg->total_number_spi);
++    DBG_MSG("%s teearg.ssiq_number: %d\n", MOD, teearg->ssiq_number);
++    DBG_MSG("%s teearg.flags: %x\n", MOD, teearg->flags);
++}
++
++void tkcore_key_param_prepare(u32 param_addr, u8 *rpmb_key, u32 rpmb_keylen)
++{
++    tee_arg_t_ptr teearg = (tee_arg_t_ptr) param_addr;
++
++    if (teearg == NULL) {
++        return;
++    }
++
++    if (rpmb_keylen != RPMB_KEY_SIZE) {
++        return;
++    }
++
++    memcpy(teearg->rpmb_key, rpmb_key, RPMB_KEY_SIZE);
++}

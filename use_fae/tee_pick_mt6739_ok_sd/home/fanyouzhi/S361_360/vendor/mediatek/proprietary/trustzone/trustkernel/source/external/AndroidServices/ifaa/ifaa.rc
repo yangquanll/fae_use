@@ -1,0 +1,4 @@
+service ifaa /system/bin/IfaaService
+    class main
+    user system
+    group system

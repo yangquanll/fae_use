@@ -1,0 +1,10 @@
+diff --git a/ueventd.mt6755.rc b/ueventd.mt6755.rc
+index 55c85de..bedcdd1 100644
+--- a/ueventd.mt6755.rc
++++ b/ueventd.mt6755.rc
+@@ -116,3 +116,5 @@
+ #MTK In-House TEE
+ /dev/ttyACM0              0660   radio      radio
+ */
++/dev/tkcoredrv            0660   root       root
++/dev/block/platform/mtk-msdc.0/11230000.msdc0/by-name/sdrpmb 0660    root    system

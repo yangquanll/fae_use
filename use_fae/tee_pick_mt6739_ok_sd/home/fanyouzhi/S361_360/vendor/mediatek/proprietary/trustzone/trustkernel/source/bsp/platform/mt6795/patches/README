@@ -1,0 +1,13 @@
+1. ProjectConfig.mk.patch is applied to device/{oem}/${lunch_target}/ProjectConfig.mk.
+	E.g, for the K52 platform, ProjectConfig.mk is patched on device/lenovo/k52_e78/ProjectConfig.mk
+
+2. init.rc.patch is applied to multiple files in device/${chip_manufacture}/${platform},
+	E.g, for the MT6755 platform, init.rc.patch is applied to device/mediatek/mt6755
+
+3. device.mk.patch is applied to device/${chip_manufacture}/${platform}/device.mk
+	E.g, for the MT6755 platform device, device.mk.patch is patched on device/mediatek/mt6755/device.mk
+
+4. file_contexts.patch is applied to device/${chip_manufacture}/common/sepolicy/file_contexts,
+	E.g, for the MT6755 platform device, file_contexts.patch is patched on device/mediatek/mt6755/file_contexts
+
+

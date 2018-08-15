@@ -1,0 +1,24 @@
+diff --git a/drivers/misc/mediatek/Kconfig b/drivers/misc/mediatek/Kconfig
+index 7a48355..e0d1310 100644
+--- a/drivers/misc/mediatek/Kconfig
++++ b/drivers/misc/mediatek/Kconfig
+@@ -504,6 +504,7 @@ source "drivers/misc/mediatek/base/power/mcdi/Kconfig"
+ source "drivers/misc/mediatek/geniezone/Kconfig"
+ source "drivers/misc/mediatek/fingerprint/Kconfig"
+ source "drivers/misc/mediatek/hct_devices/Kconfig"
++source "drivers/misc/mediatek/tkcore/Kconfig"
+ 
+ endmenu    # Misc
+ 
+diff --git a/drivers/misc/mediatek/Makefile b/drivers/misc/mediatek/Makefile
+index a25d129..32ca1b2 100644
+--- a/drivers/misc/mediatek/Makefile
++++ b/drivers/misc/mediatek/Makefile
+@@ -168,6 +168,7 @@ endif
+ obj-$(CONFIG_TRUSTONIC_TEE_SUPPORT) += gud/
+ obj-$(CONFIG_TRUSTONIC_TEE_SUPPORT) += secmem/
+ obj-$(CONFIG_MICROTRUST_TEE_SUPPORT) += teei/
++obj-$(CONFIG_TRUSTKERNEL_TEE_SUPPORT) += tkcore/
+ obj-$(CONFIG_MTK_IN_HOUSE_TEE_SUPPORT) += mtee/
+ obj-$(CONFIG_MTK_DEBUG_LATCH)	+= debug_latch/
+ obj-$(CONFIG_MTK_DEBUG_TRACER)	+= debug_tracer/

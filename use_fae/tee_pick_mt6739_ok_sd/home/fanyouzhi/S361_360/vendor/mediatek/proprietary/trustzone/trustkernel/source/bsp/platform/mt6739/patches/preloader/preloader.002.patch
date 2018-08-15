@@ -1,0 +1,30 @@
+diff --git a/bootloader/preloader/platform/mt6739/src/security/trustzone/tz_init.c b/bootloader/preloader/platform/mt6739/src/security/trustzone/tz_init.c
+index 3eb4a1a..6c88da4 100644
+--- a/bootloader/preloader/platform/mt6739/src/security/trustzone/tz_init.c
++++ b/bootloader/preloader/platform/mt6739/src/security/trustzone/tz_init.c
+@@ -84,6 +84,8 @@
+ #define TEE_MEM_ALIGNMENT (0x40000)   //4KB Alignment
+ #define ATF_MEM_ALIGNMENT (0x200000)  //2MB Alignment
+ #define ROUNDUP(a,b)      (((a) + ((b)-1)) & ~((b)-1))
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++#define TEE_MEM_ALIGNMENT (0x100000)  //1MB Alignment
+ #else
+ #define TEE_MEM_ALIGNMENT (0x200000)  //2MB Alignment
+ #endif
+@@ -260,14 +262,11 @@ u32 tee_get_load_addr(u32 maddr)
+ 
+     DBG_MSG("%s reserved_addr: 0x%x, reserved_size: 0x%x\n", MOD, tee_secmem_start, tee_secmem_size + ATF_LOG_BUFFER_SIZE);
+ #elif CFG_TRUSTKERNEL_TEE_SUPPORT
+-    limit_addr = 0x80000000;
++    limit_addr = 0xF0000000;
+     DBG_MSG("%s align_addr: 0x%llx, limit_addr: 0x%llx\n", MOD, align_addr, limit_addr);
+     tee_secmem_start = (u32)mblock_reserve_ext(&bootarg.mblock_info,
+-        (u64)(tee_secmem_size + ATF_LOG_BUFFER_SIZE), (u64)TEE_MEM_ALIGNMENT,
+-        limit_addr, 0, "tee-reserved");
++        (u64)(tee_secmem_size + ATF_LOG_BUFFER_SIZE), align_addr, limit_addr, 0, "tee-reserved");
+     DBG_MSG("%s TEE reserved_addr: 0x%x, reserved_size: 0x%x\n", MOD, tee_secmem_start, tee_secmem_size + ATF_LOG_BUFFER_SIZE);
+-
+-
+ #else /* CFG_TRUSTONIC_TEE_SUPPORT */
+     limit_addr = 0x78000000;
+     DBG_MSG("%s align_addr: 0x%llx, limit_addr: 0x%llx\n", MOD, align_addr, limit_addr);

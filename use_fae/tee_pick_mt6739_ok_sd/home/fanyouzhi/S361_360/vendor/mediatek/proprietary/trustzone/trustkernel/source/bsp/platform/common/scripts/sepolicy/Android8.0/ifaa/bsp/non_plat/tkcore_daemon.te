@@ -1,0 +1,2 @@
+# for ifaa service to access admin device
+allow ifaa tkcore_admin_device: chr_file { read write open ioctl };

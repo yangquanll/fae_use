@@ -1,0 +1,203 @@
+commit 648b9d19a12891adb56ea9aa8474690c7ee60e70
+Author: git <git@trustkernel.com>
+Date:   Fri May 19 01:17:51 2017 +0800
+
+    001.baseline
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index bf8ccf3..5a8a4a6 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -223,7 +223,7 @@ config MTK_NO_ATF
+ 
+ config MTK_KERNEL_IN_SECURE_MODE
+     bool
+-    depends on (!TRUSTY) && (!TRUSTONIC_TEE_SUPPORT) && (MTK_NO_ATF)
++    depends on (!TRUSTY) && (!TRUSTONIC_TEE_SUPPORT) && (!TRUSTKERNEL_TEE_SUPPORT) && (MTK_NO_ATF)
+     default y
+ 
+ config NEED_RET_TO_USER
+@@ -928,7 +928,7 @@ config ARCH_MT6580
+ 	select ARCH_HAS_CPUFREQ
+ 	select ARM_AMBA
+ 	select CPU_V7
+-	select FIQ_GLUE if (!TRUSTONIC_TEE_SUPPORT && !TRUSTY)
++	select FIQ_GLUE if (!TRUSTONIC_TEE_SUPPORT && !TRUSTY && !TRUSTKERNEL_TEE_SUPPORT)
+ 	select HAVE_SMP
+ 	select NEED_MACH_MEMORY_H
+ 	select IRQ_DOMAIN
+diff --git a/drivers/misc/mediatek/Kconfig b/drivers/misc/mediatek/Kconfig
+index 5aa5240..8d90bc8 100644
+--- a/drivers/misc/mediatek/Kconfig
++++ b/drivers/misc/mediatek/Kconfig
+@@ -407,6 +407,7 @@ source "drivers/misc/mediatek/sysenv/Kconfig"
+  
+ source "drivers/misc/mediatek/teei/Kconfig"
+ source "drivers/misc/mediatek/trustzone/Kconfig"
++source "drivers/misc/mediatek/tkcore/Kconfig"
+ source "drivers/misc/mediatek/vow/Kconfig"
+ source "drivers/misc/mediatek/watchpoint/Kconfig"
+ source "drivers/misc/mediatek/rt-regmap/Kconfig"
+diff --git a/drivers/misc/mediatek/Makefile b/drivers/misc/mediatek/Makefile
+index bd15c8b..053a3e7 100644
+--- a/drivers/misc/mediatek/Makefile
++++ b/drivers/misc/mediatek/Makefile
+@@ -149,6 +149,7 @@ obj-$(CONFIG_MTK_BTIF) += btif/
+ obj-$(CONFIG_MTK_CONN_MD) += conn_md/
+ 
+ obj-$(CONFIG_MTK_IN_HOUSE_TEE_SUPPORT) += gcpu/
++obj-$(CONFIG_TRUSTKERNEL_TEE_SUPPORT) += tkcore/
+ obj-$(CONFIG_TRUSTONIC_TEE_SUPPORT) += gcpu/
+ ifeq ($(CONFIG_HAVE_MTK_IN_HOUSE_TEE_SUPPORT),y)
+ obj-$(CONFIG_TRUSTY) += gcpu/
+diff --git a/drivers/misc/mediatek/base/power/cpuidle_v1/Makefile b/drivers/misc/mediatek/base/power/cpuidle_v1/Makefile
+index ac94803..c761ffc 100644
+--- a/drivers/misc/mediatek/base/power/cpuidle_v1/Makefile
++++ b/drivers/misc/mediatek/base/power/cpuidle_v1/Makefile
+@@ -2,6 +2,12 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/$(MTK_PLATFORM)/
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/spm_v2/
+ 
++ifeq ($(CONFIG_ARCH_MT6580), y)
++ifeq ($(CONFIG_TRUSTKERNEL_TEE_SUPPORT), y)
++ccflags-y += -I$(srctree)/drivers/misc/mediatek/tkcore/include
++endif
++endif
++
+ obj-y += mt_cpuidle.o
+ 
+ ifneq ($(CONFIG_ARM64), y)
+diff --git a/drivers/misc/mediatek/base/power/cpuidle_v1/mt_cpuidle.c b/drivers/misc/mediatek/base/power/cpuidle_v1/mt_cpuidle.c
+index 9cbffed..77b10f1 100644
+--- a/drivers/misc/mediatek/base/power/cpuidle_v1/mt_cpuidle.c
++++ b/drivers/misc/mediatek/base/power/cpuidle_v1/mt_cpuidle.c
+@@ -38,6 +38,9 @@
+ #if defined(CONFIG_TRUSTY) && defined(CONFIG_ARCH_MT6580)
+ #include <mach/mt_trusty_api.h>
+ #endif
++#if defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++#include <linux/tee_pm_sec_call.h>
++#endif
+ 
+ #define TAG "[Power-Dormant] "
+ 
+@@ -891,6 +894,9 @@ int mt_cpu_dormant(unsigned long flags)
+ 	mt_secure_call(MC_FC_MTK_SLEEP, virt_to_phys(cpu_resume), cpuid, IS_DORMANT_INNER_OFF(flags) ? 0 : 1);
+ #elif defined(CONFIG_TRUSTY) && defined(CONFIG_ARCH_MT6580)
+ 	mt_trusty_call(SMC_FC_CPU_DORMANT, virt_to_phys(cpu_resume), cpuid, 0);
++#elif defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++	tee_pm_sec_call(TKCORE_SET_NS_BOOT_ADDR, virt_to_phys(cpu_resume), !!IS_DORMANT_INNER_OFF(flags), cpuid);
++	tee_pm_sec_call(TKCORE_PREPARE_CPU_OFF, !! IS_DORMANT_INNER_OFF(flags), cpuid, 0);
+ #else
+ 	writel_relaxed(virt_to_phys(cpu_resume), DMT_BOOTROM_BOOT_ADDR);
+ #endif
+@@ -914,6 +920,12 @@ int mt_cpu_dormant(unsigned long flags)
+ 			mt_trusty_call(SMC_FC_CPU_ON, virt_to_phys(cpu_wake_up_errata_802022), 2, 1);
+ 			mt_trusty_call(SMC_FC_CPU_ON, virt_to_phys(cpu_wake_up_errata_802022), 3, 1);
+ 		}
++#elif defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++		tee_pm_sec_call(TKCORE_SET_NS_BOOT_ADDR, virt_to_phys(cpu_wake_up_errata_802022), 1U, 1U);
++		if (num_possible_cpus() == 4) {
++			tee_pm_sec_call(TKCORE_SET_NS_BOOT_ADDR, virt_to_phys(cpu_wake_up_errata_802022), 1U, 2U);
++			tee_pm_sec_call(TKCORE_SET_NS_BOOT_ADDR, virt_to_phys(cpu_wake_up_errata_802022), 1U, 3U);
++		}
+ #endif
+ 		spm_mtcmos_ctrl_cpu1(STA_POWER_ON, 1);
+ 		if (num_possible_cpus() == 4) {
+@@ -929,6 +941,8 @@ int mt_cpu_dormant(unsigned long flags)
+ 		mt_secure_call(MC_FC_ERRATA_808022, 0, 0, 0);
+ #elif defined(CONFIG_TRUSTY) && defined(CONFIG_ARCH_MT6580)
+ 		mt_trusty_call(SMC_FC_CPU_ERRATA_802022, 0, 0, 0);
++#elif defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++		tee_pm_sec_call(TKCORE_ERRATA_802022, 0, 0, 0);
+ #endif
+ 	}
+ #endif
+diff --git a/drivers/misc/mediatek/base/power/mt6580/Makefile b/drivers/misc/mediatek/base/power/mt6580/Makefile
+index 326348e..a60d7f0 100644
+--- a/drivers/misc/mediatek/base/power/mt6580/Makefile
++++ b/drivers/misc/mediatek/base/power/mt6580/Makefile
+@@ -24,6 +24,11 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/video/include/
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/cmdq/v2/
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/cmdq/v2/$(MTK_PLATFORM)/
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/lcm/inc/
++
++ifeq ($(CONFIG_TRUSTKERNEL_TEE_SUPPORT), y)
++ccflags-y += -I$(srctree)/drivers/misc/mediatek/tkcore/include
++endif
++
+ endif
+ 
+ obj-y += mt_spm_mtcmos.o
+diff --git a/drivers/misc/mediatek/base/power/mt6580/hotplug.c b/drivers/misc/mediatek/base/power/mt6580/hotplug.c
+index 0d6eed4..dc504e9 100644
+--- a/drivers/misc/mediatek/base/power/mt6580/hotplug.c
++++ b/drivers/misc/mediatek/base/power/mt6580/hotplug.c
+@@ -19,6 +19,10 @@
+ #include <mach/mt_trusty_api.h>
+ #endif
+ 
++#if defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++#include <linux/tee_pm_sec_call.h>
++#endif
++
+ #include "mt-smp.h"
+ #include "smp.h"
+ #include "hotplug.h"
+@@ -29,6 +33,8 @@ static inline void cpu_enter_lowpower(unsigned int cpu)
+ {
+ #if defined(CONFIG_TRUSTY)
+ 	mt_trusty_call(SMC_FC_CPU_OFF, 0, cpu, 0);
++#elif defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++	tee_pm_sec_call(TKCORE_PREPARE_CPU_OFF, 0U, (u32) cpu, 0);
+ #endif
+ 
+ 	if (((cpu == 4) && (cpu_online(5) == 0) && (cpu_online(6) == 0)
+diff --git a/drivers/misc/mediatek/base/power/mt6580/mt-smp.c b/drivers/misc/mediatek/base/power/mt6580/mt-smp.c
+index 14d7001..44ff0f5 100644
+--- a/drivers/misc/mediatek/base/power/mt6580/mt-smp.c
++++ b/drivers/misc/mediatek/base/power/mt6580/mt-smp.c
+@@ -24,6 +24,10 @@
+ #include <mach/mt_trusty_api.h>
+ #endif
+ 
++#if defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++#include <linux/tee_pm_sec_call.h>
++#endif
++
+ #include "mt-smp.h"
+ #include "smp.h"
+ #include "hotplug.h"
+@@ -103,6 +107,10 @@ int __cpuinit mt_smp_boot_secondary(unsigned int cpu, struct task_struct *idle)
+ #elif defined(CONFIG_TRUSTY)
+ 	if (cpu >= 1 && cpu <= 3)
+ 		mt_trusty_call(SMC_FC_CPU_ON, virt_to_phys(mt_secondary_startup), cpu, 0);
++#elif defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
++	if (cpu >= 1 && cpu <= 3)
++		tee_pm_sec_call(TKCORE_SET_NS_BOOT_ADDR,
++			virt_to_phys(mt_secondary_startup), 0U, (u32) cpu);
+ #else
+ 	writel_relaxed(virt_to_phys(mt_secondary_startup), infracfg_ao_base + 0x800);
+ #endif
+diff --git a/drivers/misc/mediatek/mach/mt6580/ca7_timer.c b/drivers/misc/mediatek/mach/mt6580/ca7_timer.c
+index ce5efb9..deea6d2 100644
+--- a/drivers/misc/mediatek/mach/mt6580/ca7_timer.c
++++ b/drivers/misc/mediatek/mach/mt6580/ca7_timer.c
+@@ -269,7 +269,7 @@ static void __arch_timer_setup(unsigned type, struct clock_event_device *clk)
+ 			clk->set_next_event = arch_timer_set_next_event_virt;
+ 		} else {
+ /* When TEE is enabled, change to use non-secure local timer */
+-#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) || defined(CONFIG_TRUSTY)
++#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) || defined(CONFIG_TRUSTY) || defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
+ 			clk->irq = arch_timer_ppi[PHYS_NONSECURE_PPI];	/* GIC_PPI_NS_PRIVATE_TIMER; */
+ #else
+ 			clk->irq = arch_timer_ppi[PHYS_SECURE_PPI];	/* GIC_PPI_PRIVATE_TIMER; */
+@@ -562,7 +562,7 @@ static int __init arch_timer_register(void)
+ 					 "arch_timer", arch_timer_evt);
+ 	} else {
+ /* When TEE is enabled, change to use non-secure local timer */
+-#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) || defined(CONFIG_TRUSTY)
++#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) || defined(CONFIG_TRUSTY) || defined(CONFIG_TRUSTKERNEL_TEE_SUPPORT)
+ 		ppi = arch_timer_ppi[PHYS_NONSECURE_PPI];	/* GIC_PPI_NS_PRIVATE_TIMER; */
+ #else
+ 		ppi = arch_timer_ppi[PHYS_SECURE_PPI];	/* GIC_PPI_PRIVATE_TIMER; */

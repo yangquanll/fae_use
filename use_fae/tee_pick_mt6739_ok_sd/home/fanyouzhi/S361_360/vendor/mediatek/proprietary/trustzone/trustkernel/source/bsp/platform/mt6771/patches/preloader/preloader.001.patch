@@ -1,0 +1,719 @@
+diff --git a/bootloader/preloader/custom/k71v1_64_bsp/cust_bldr.mak b/bootloader/preloader/custom/k71v1_64_bsp/cust_bldr.mak
+index c10a2ca..32310d8 100644
+--- a/bootloader/preloader/custom/k71v1_64_bsp/cust_bldr.mak
++++ b/bootloader/preloader/custom/k71v1_64_bsp/cust_bldr.mak
+@@ -27,13 +27,25 @@ ifeq ($(strip $(MTK_TEE_SUPPORT)),yes)
+   else
+     CFG_GOOGLE_TRUSTY_SUPPORT = 0
+   endif
++  ifeq ($(strip $(TRUSTKERNEL_TEE_SUPPORT)),yes)
++    CFG_TRUSTKERNEL_TEE_SUPPORT = 1
++    CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT = 1
++  else
++    CFG_TRUSTKERNEL_TEE_SUPPORT = 0
++    CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT = 0
++  endif
++
+ else
+   CFG_TEE_SUPPORT = 0
+   CFG_TRUSTONIC_TEE_SUPPORT = 0
+   CFG_MICROTRUST_TEE_SUPPORT = 0
+   CFG_GOOGLE_TRUSTY_SUPPORT = 0
++  CFG_TRUSTKERNEL_TEE_SUPPORT = 0
++  CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT = 0
+ endif
+ $(warning CFG_TEE_SUPPORT=$(CFG_TEE_SUPPORT))
+ $(warning CFG_TRUSTONIC_TEE_SUPPORT=$(CFG_TRUSTONIC_TEE_SUPPORT))
+ $(warning CFG_MICROTRUST_TEE_SUPPORT=$(CFG_MICROTRUST_TEE_SUPPORT))
+ $(warning CFG_GOOGLE_TRUSTY_SUPPORT=$(CFG_GOOGLE_TRUSTY_SUPPORT))
++$(warning CFG_TRUSTKERNEL_TEE_SUPPORT=$(CFG_TRUSTKERNEL_TEE_SUPPORT))
++$(warning CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT=$(CFG_TRUSTKERNEL_TEE_SDPRMB_SUPPORT))
+diff --git a/bootloader/preloader/custom/k71v1_64_bsp/k71v1_64_bsp.mk b/bootloader/preloader/custom/k71v1_64_bsp/k71v1_64_bsp.mk
+index cf83e33..dc3b8c2 100644
+--- a/bootloader/preloader/custom/k71v1_64_bsp/k71v1_64_bsp.mk
++++ b/bootloader/preloader/custom/k71v1_64_bsp/k71v1_64_bsp.mk
+@@ -26,4 +26,6 @@ CUSTOM_CONFIG_MAX_DRAM_SIZE=0x800000000
+ MT6370_PMU=yes
+ MTK_UNLOCK_BAT_SUPPORT=yes
+ MTK_EXT_CHGDET_SUPPORT=yes
+-export MTK_PLATFORM MTK_MT6336_SUPPORT MTK_FAN5405_SUPPORT MTK_EMMC_SUPPORT MTK_8193_SUPPORT MTK_SECURITY_SW_SUPPORT MTK_SEC_CHIP_SUPPORT MTK_SEC_USBDL MTK_SEC_BOOT MTK_SEC_MODEM_AUTH MTK_SEC_SECRO_AC_SUPPORT CUSTOM_SEC_AUTH_SUPPORT MTK_KERNEL_POWER_OFF_CHARGING MTK_EMMC_SUPPORT_OTP MTK_COMBO_NAND_SUPPORT MTK_DISABLE_POWER_ON_OFF_VOLTAGE_LIMITATION MTK_BQ24160_SUPPORT MTK_SEC_VIDEO_PATH_SUPPORT MTK_FACTORY_LOCK_SUPPORT MTK_TINYSYS_SSPM_SUPPORT MTK_SECURITY_ANTI_ROLLBACK CUSTOM_CONFIG_MAX_DRAM_SIZE MT6370_PMU MTK_UNLOCK_BAT_SUPPORT MTK_EXT_CHGDET_SUPPORT
++MTK_TEE_SUPPORT=no
++TRUSTKERNEL_TEE_SUPPORT=no
++export MTK_TEE_SUPPORT TRUSTKERNEL_TEE_SUPPORT MTK_PLATFORM MTK_MT6336_SUPPORT MTK_FAN5405_SUPPORT MTK_EMMC_SUPPORT MTK_8193_SUPPORT MTK_SECURITY_SW_SUPPORT MTK_SEC_CHIP_SUPPORT MTK_SEC_USBDL MTK_SEC_BOOT MTK_SEC_MODEM_AUTH MTK_SEC_SECRO_AC_SUPPORT CUSTOM_SEC_AUTH_SUPPORT MTK_KERNEL_POWER_OFF_CHARGING MTK_EMMC_SUPPORT_OTP MTK_COMBO_NAND_SUPPORT MTK_DISABLE_POWER_ON_OFF_VOLTAGE_LIMITATION MTK_BQ24160_SUPPORT MTK_SEC_VIDEO_PATH_SUPPORT MTK_FACTORY_LOCK_SUPPORT MTK_TINYSYS_SSPM_SUPPORT MTK_SECURITY_ANTI_ROLLBACK CUSTOM_CONFIG_MAX_DRAM_SIZE MT6370_PMU MTK_UNLOCK_BAT_SUPPORT MTK_EXT_CHGDET_SUPPORT
+diff --git a/bootloader/preloader/platform/mt6771/default.mak b/bootloader/preloader/platform/mt6771/default.mak
+index bc53bc7..c3771c4 100644
+--- a/bootloader/preloader/platform/mt6771/default.mak
++++ b/bootloader/preloader/platform/mt6771/default.mak
+@@ -187,6 +187,15 @@ endif
+ CFG_TEE_VIRTUAL_RPMB_SUPPORT :=1
+ CFG_MICROTRUST_TEE_SUPPORT :=0
+ CFG_TRUSTONIC_TEE_SUPPORT :=0
++CFG_TRUSTKERNEL_TEE_SUPPORT :=0
++CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT :=0
++ifeq ("$(TRUSTKERNEL_TEE_SUPPORT)","yes")
++CFG_RPMB_SET_KEY :=1
++else
++CFG_RPMB_SET_KEY :=0
++endif
++
++
+ ifeq ("$(TARGET_BUILD_VARIANT)","eng")
+ CFG_TEE_SECURE_MEM_PROTECTED :=0
+ else
+diff --git a/bootloader/preloader/platform/mt6771/feature.mak b/bootloader/preloader/platform/mt6771/feature.mak
+index 7eacf5f..06e2f74 100644
+--- a/bootloader/preloader/platform/mt6771/feature.mak
++++ b/bootloader/preloader/platform/mt6771/feature.mak
+@@ -384,6 +384,17 @@ C_OPTION += -DCFG_TEE_SUPPORT="$(CFG_TEE_SUPPORT)"
+ export CFG_TEE_SUPPORT
+ endif
+ 
++ifdef CFG_TRUSTKERNEL_TEE_SUPPORT
++C_OPTION += -DCFG_TRUSTKERNEL_TEE_SUPPORT="$(CFG_TRUSTKERNEL_TEE_SUPPORT)"
++export CFG_TRUSTKERNEL_TEE_SUPPORT
++endif
++
++ifdef CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++C_OPTION += -DCFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT="$(CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT)"
++export CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++endif
++
++
+ ifdef CFG_RPMB_SET_KEY
+ C_OPTION += -DCFG_RPMB_SET_KEY="$(CFG_RPMB_SET_KEY)"
+ export CFG_RPMB_SET_KEY
+diff --git a/bootloader/preloader/platform/mt6771/src/core/main.c b/bootloader/preloader/platform/mt6771/src/core/main.c
+index d1a28fb..4032ebb 100644
+--- a/bootloader/preloader/platform/mt6771/src/core/main.c
++++ b/bootloader/preloader/platform/mt6771/src/core/main.c
+@@ -58,6 +58,13 @@
+ #include "ab_bootcheck.h"
+ #endif
+ 
++#if CFG_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#include "tz_tkcore.h"
++#endif
++#endif
++
++
+ /*============================================================================*/
+ /* CONSTAND DEFINITIONS                                                       */
+ /*============================================================================*/
+@@ -175,6 +182,14 @@ static void bldr_pre_process(void)
+     part_init();
+     BOOTING_TIME_PROFILING_LOG("part_init");
+ 
++#if CFG_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++    tkcore_boot_param_prepare_sdrpmb_region(part_get("sdrpmb"));
++#endif
++#endif
++#endif
++
+ #if CFG_FAST_META_SUPPORT
+     read_meta_proinfo(&meta_boot, &meta_log);
+     if(check_meta_short_pin() || (meta_boot == 0x31)) {
+@@ -379,6 +394,14 @@ int bldr_load_tee_part(char *name, blkdev_t *bdev, u32 *addr, u32 offset, u32 *s
+     }
+ #endif
+ 
++#if CFG_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++    tkcore_boot_param_prepare_sdrpmb_data(&(bootarg.mblock_info), bdev);
++#endif
++#endif
++#endif
++
+     return ret;
+ }
+ 
+diff --git a/bootloader/preloader/platform/mt6771/src/drivers/mmc_core.c b/bootloader/preloader/platform/mt6771/src/drivers/mmc_core.c
+index 1e8a02f..8cccdc3 100644
+--- a/bootloader/preloader/platform/mt6771/src/drivers/mmc_core.c
++++ b/bootloader/preloader/platform/mt6771/src/drivers/mmc_core.c
+@@ -1593,6 +1593,50 @@ int mmc_lock_unlock(struct mmc_host *host)
+ }
+ #endif
+ 
++#if CFG_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++
++int tz_mmc_set_write_prot(struct mmc_card *card, u32 addr)
++{
++    struct mmc_command cmd;
++    unsigned short cmdclass;
++    cmdclass = unstuff_bits(card->raw_csd, 84, 12);
++
++    if (!(cmdclass & CCC_WRITE_PROT))
++        return MMC_ERR_INVALID;
++
++    cmd.opcode  = MMC_CMD_SET_WRITE_PROT;
++    cmd.rsptyp  = RESP_R1B;
++    cmd.arg     = addr;
++    cmd.retries = 3;
++    cmd.timeout = CMD_TIMEOUT;
++
++    return mmc_cmd(card->host, &cmd);
++}
++
++int tz_mmc_clr_write_prot(struct mmc_card *card, u32 addr)
++{
++    struct mmc_command cmd;
++    unsigned short cmdclass;
++    cmdclass = unstuff_bits(card->raw_csd, 84, 12);
++
++    if (!(cmdclass & CCC_WRITE_PROT))
++        return MMC_ERR_INVALID;
++
++    cmd.opcode  = MMC_CMD_CLR_WRITE_PROT;
++    cmd.rsptyp  = RESP_R1B;
++    cmd.arg     = addr;
++    cmd.retries = 3;
++    cmd.timeout = CMD_TIMEOUT;
++
++    return mmc_cmd(card->host, &cmd);
++}
++
++#endif
++#endif
++#endif
++
+ int mmc_set_write_prot(struct mmc_host *host, u32 addr)
+ {
+ 	struct mmc_command cmd;
+diff --git a/bootloader/preloader/platform/mt6771/src/security/trustzone/inc/tz_tkcore.h b/bootloader/preloader/platform/mt6771/src/security/trustzone/inc/tz_tkcore.h
+new file mode 100644
+index 0000000..69ca50f
+--- /dev/null
++++ b/bootloader/preloader/platform/mt6771/src/security/trustzone/inc/tz_tkcore.h
+@@ -0,0 +1,81 @@
++#ifndef TZ_TKCORE_H
++#define TZ_TKCORE_H
++
++#include "typedefs.h"
++
++#define TKCORE_BOOTCFG_MAGIC    (0x54534958)
++
++#define TEE_ARGUMENT_VERSION_LEGACY (0x00010000U)
++#define TEE_ARGUMENT_VERSION_V1_0   (0x00010001U)
++#define TEE_ARGUMENT_VERSION_V1_1   (0x00010002U)
++#define TEE_ARGUMENT_VERSION_V1_2   (0x00010003U)
++
++#define TEE_ARGUMENT_VERSION        TEE_ARGUMENT_VERSION_V1_2
++
++#define TKCORE_SHM_SIZE_LIMIT   (0x1000000U)
++
++#define RPMB_KEY_SIZE    32
++
++#define SDRPMB_FAILURE_MAGIC    (0xCDCDCDCDU)
++/* effective data size */
++#define SDRPMB_DATA_SIZE        (1U << 20)
++/* size of two write protected regions */
++#define SDRPMB_REGION_SIZE      (16U << 20)
++/* granu of sdrpmb region */
++#define SDRPMB_REGION_ALIGNMENT (8U << 20)
++
++typedef struct {
++    u32 magic;        // magic value from information
++    u32 length;       // size of struct in bytes.
++    u64 version;      // Version of structure
++    u64 dRamBase;     // NonSecure DRAM start address
++    u64 dRamSize;     // NonSecure DRAM size
++    u64 secDRamBase;  // Secure DRAM start address
++    u64 secDRamSize;  // Secure DRAM size
++    u64 secIRamBase;  // Secure IRAM base
++    u64 secIRamSize;  // Secure IRam size
++    u64 gic_distributor_base;
++    u64 gic_cpuinterface_base;
++    u32 gic_version;
++    u32    uart_base;
++    u32 total_number_spi;
++    u32 ssiq_number;
++    u64 flags;
++    u8  rpmb_key[RPMB_KEY_SIZE];
++
++    /* for TEE_ARGUMENT_VERSION_1 */
++    u8 rpmb_key_programmed;
++
++    /* for TEE_ARGUMENT_VERSION_2 (mt6580 specific) */
++    u32 nw_bootargs;
++    u32 nw_bootargs_size;
++
++    /* for TEE_ARGUMENT_VERSION_3 */
++    u32 sdrpmb_partaddr;
++    u32 sdrpmb_partsize;
++    u32 sdrpmb_starting_sector;
++    u32 sdrpmb_nr_sectors;
++
++    u8 resv[7];
++} __attribute__((packed)) tee_arg_t, *tee_arg_t_ptr;
++
++void tkcore_boot_param_prepare(u32 param_addr, u32 tee_entry,
++    u64 sec_dram_size, u64 dram_base, u64 dram_size, int meta_uart);
++
++#if CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++void tkcore_boot_param_prepare_sdrpmb_region(part_t *part);
++
++void tkcore_boot_param_prepare_sdrpmb_data(mblock_info_t *mblock, blkdev_t *bootdev);
++
++void tkcore_boot_sdrpmb_init_finish(u32 param_addr);
++#endif
++
++void tkcore_boot_param_prepare_rpmbkey(u32 param_addr,
++    u8 *rpmb_key, u32 rpmb_keylen);
++
++void tkcore_boot_param_prepare_nwbootargs(u32 param_addr,
++    u32 addr, u32 size);
++
++void tkcore_dump_param(u32 param_addr);
++
++#endif
+diff --git a/bootloader/preloader/platform/mt6771/src/security/trustzone/makefile b/bootloader/preloader/platform/mt6771/src/security/trustzone/makefile
+index 5bb6353..a7fefd4 100644
+--- a/bootloader/preloader/platform/mt6771/src/security/trustzone/makefile
++++ b/bootloader/preloader/platform/mt6771/src/security/trustzone/makefile
+@@ -22,6 +22,10 @@ ifeq ($(CFG_GOOGLE_TRUSTY_SUPPORT),1)
+ MOD_SRC  += tz_trusty.c
+ endif
+ 
++ifeq ($(CFG_TRUSTKERNEL_TEE_SUPPORT),1)
++MOD_SRC += tz_tkcore.c
++endif
++
+ ifeq ($(CFG_MICROTRUST_TEE_SUPPORT),1)
+ MOD_SRC  += tz_teei.c
+ endif
+diff --git a/bootloader/preloader/platform/mt6771/src/security/trustzone/tz_init.c b/bootloader/preloader/platform/mt6771/src/security/trustzone/tz_init.c
+index cb15f42..17dcddb 100644
+--- a/bootloader/preloader/platform/mt6771/src/security/trustzone/tz_init.c
++++ b/bootloader/preloader/platform/mt6771/src/security/trustzone/tz_init.c
+@@ -62,6 +62,10 @@
+ #include <emi_mpu_mt.h>
+ #include "memory_layout.h"
+ 
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#include "tz_tkcore.h"
++#endif
++
+ #include "pal_log.h"
+ /**************************************************************************
+  *  DEBUG FUNCTIONS
+@@ -86,6 +90,8 @@
+ #define TEE_MEM_ALIGNMENT (0x40000)   //4KB Alignment
+ #define ATF_MEM_ALIGNMENT (0x200000)  //2MB Alignment
+ #define ROUNDUP(a,b)      (((a) + ((b)-1)) & ~((b)-1))
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT 
++#define TEE_MEM_ALIGNMENT (0x100000)  //1MB Alignment
+ #else
+ #define TEE_MEM_ALIGNMENT (0x200000)  //2MB Alignment
+ #endif
+@@ -146,6 +152,8 @@ void tee_get_secmem_start(u32 *addr)
+ #if CFG_TEE_SUPPORT
+ #if CFG_TRUSTONIC_TEE_SUPPORT
+     *addr = tee_secmem_start - ROUNDUP(ATF_LOG_BUFFER_SIZE, ATF_MEM_ALIGNMENT);
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT 
++    *addr = tee_secmem_start + tee_secmem_size;
+ #else
+     *addr = tee_secmem_start - ATF_LOG_BUFFER_SIZE;
+ #endif
+@@ -262,6 +270,14 @@ u32 tee_get_load_addr(u32 maddr)
+             (u32)(limit_addr - align_addr));
+         BUG_ON(1);
+     }
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++    limit_addr = 0xF0000000;
++    DBG_MSG("%s align_addr: 0x%llx, limit_addr: 0x%llx\n", MOD, align_addr, limit_addr);
++    tee_secmem_start = (u32)mblock_reserve_ext(&bootarg.mblock_info,
++        (u64)(tee_secmem_size + ATF_LOG_BUFFER_SIZE), (u64)TEE_MEM_ALIGNMENT,
++        limit_addr, 0, "tee-reserved");
++    DBG_MSG("%s TEE reserved_addr: 0x%x, reserved_size: 0x%x\n", MOD, tee_secmem_start, tee_secmem_size + ATF_LOG_BUFFER_SIZE);
++
+ #else /* CFG_TRUSTONIC_TEE_SUPPORT */
+     limit_addr = 0x80000000;
+     DBG_MSG("%s align_addr: 0x%llx, limit_addr: 0x%llx\n", MOD, align_addr, limit_addr);
+@@ -280,6 +296,9 @@ u32 tee_get_load_addr(u32 maddr)
+ #if CFG_TRUSTONIC_TEE_SUPPORT
+     atf_log_buf_start = tee_secmem_start;
+     tee_secmem_start = tee_secmem_start + ROUNDUP(ATF_LOG_BUFFER_SIZE, ATF_MEM_ALIGNMENT);
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++    atf_log_buf_start = tee_secmem_start + tee_secmem_size;
++    tee_secmem_start = tee_secmem_start;
+ #else
+     atf_log_buf_start = tee_secmem_start;
+     tee_secmem_start = tee_secmem_start + ATF_LOG_BUFFER_SIZE;
+@@ -300,10 +319,18 @@ static void tee_sec_config(void)
+     tz_sram_sec_init(CFG_NON_SECURE_SRAM_ADDR);
+ 
+ #if CFG_TEE_SUPPORT
++
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++    tz_sec_mem_init(tee_entry_addr, tee_entry_addr + tee_secmem_size - TKCORE_SHM_SIZE_LIMIT - 1,
++        SECURE_OS_MPU_REGION_ID);
++       DBG_MSG("%s set secure memory protection : 0x%x, 0x%x (%d)\n", MOD, tee_entry_addr,
++        tee_entry_addr + tee_secmem_size - TKCORE_SHM_SIZE_LIMIT - 1, SECURE_OS_MPU_REGION_ID);
++#else
+     tz_sec_mem_init(tee_entry_addr, tee_entry_addr + tee_secmem_size - 1, SECURE_OS_MPU_REGION_ID);
+     DBG_MSG("%s set secure memory protection : 0x%x, 0x%x (%d)\n", MOD, tee_entry_addr,
+         tee_entry_addr + tee_secmem_size - 1, SECURE_OS_MPU_REGION_ID);
+ #endif
++#endif
+ #if 1
+ 
+     {
+@@ -431,6 +458,13 @@ void trustzone_post_init(void)
+                             CFG_DRAM_ADDR, platform_memory_size(), platform_chip_hw_code());
+     //prepare the parameter for secure driver here
+     teearg->tee_support = 1;
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++       DBG_MSG("%s come to    tkcore ***  \n", MOD);
++    tkcore_boot_param_prepare(TEE_BOOT_ARG_ADDR, tee_entry_addr, tee_secmem_size,
++        CFG_DRAM_ADDR, platform_memory_size(),
++        g_boot_mode == META_BOOT && g_meta_com_type == META_UART_COM);
++    //prepare the parameter for secure driver here
++    teearg->tee_support = 1;
+ #elif CFG_GOOGLE_TRUSTY_SUPPORT
+     trusty_boot_param_prepare(TEE_BOOT_ARG_ADDR, tee_entry_addr, tee_secmem_size,
+         CFG_DRAM_ADDR, platform_memory_size());
+@@ -463,6 +497,18 @@ void trustzone_post_init(void)
+                            sizeof(u32)*teearg->atf_hrid_size, rpmb_key);
+ #endif
+ 
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++    tkcore_boot_param_prepare_rpmbkey(TEE_BOOT_ARG_ADDR, rpmb_key, RPMB_KEY_SIZE);
++    /* only useful for non-ATF platform */
++    tkcore_boot_param_prepare_nwbootargs(TEE_BOOT_ARG_ADDR, 0U, 0U);
++
++#if CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++    tkcore_boot_sdrpmb_init_finish(TEE_BOOT_ARG_ADDR);
++#endif
++
++    tkcore_dump_param(TEE_BOOT_ARG_ADDR);
++#endif
++
+ #if CFG_RPMB_SET_KEY
+ #if (CFG_BOOT_DEV == BOOTDEV_SDMMC) // For eMMC project with TEEs
+     teearg->tee_rpmb_size = mmc_rpmb_get_size();
+diff --git a/bootloader/preloader/platform/mt6771/src/security/trustzone/tz_tkcore.c b/bootloader/preloader/platform/mt6771/src/security/trustzone/tz_tkcore.c
+new file mode 100644
+index 0000000..54fca1d
+--- /dev/null
++++ b/bootloader/preloader/platform/mt6771/src/security/trustzone/tz_tkcore.c
+@@ -0,0 +1,314 @@
++/* Include header files */
++#include "typedefs.h"
++#include "tz_mem.h"
++#include "uart.h"
++#include "dram_buffer.h"
++
++#include <mmc_core.h>
++
++#include "tz_tkcore.h"
++
++#define MOD "[TZ_TKCORE]"
++
++#define TEE_DEBUG
++#ifdef TEE_DEBUG
++#define DBG_MSG(str, ...) do {print(str, ##__VA_ARGS__);} while(0)
++#else
++#define DBG_MSG(str, ...) do {} while(0)
++#endif
++
++#if CFG_BOOT_ARGUMENT_BY_ATAG
++extern unsigned int g_uart;
++#elif CFG_BOOT_ARGUMENT && !CFG_BOOT_ARGUMENT_BY_ATAG
++#define bootarg g_dram_buf->bootarg
++#endif
++
++#if CFG_TRUSTKERNEL_TEE_SDRPMB_SUPPORT
++
++struct sdrpmb_info {
++    int failed; int part_id;
++    u32 sdrpmb_part_start;
++
++    u32 sdrpmb_partaddr;
++    u32 sdrpmb_partsize;
++    u32 sdrpmb_starting_sector;
++    u32 sdrpmb_nr_sectors;
++} sdrpmb_info = { 0, -1, 0U, 0U, 0U, 0U, 0U };
++
++static u64 mblock_reserve_dryrun(mblock_info_t *mblock_info, u64 reserved_size)
++{
++    int i, max_rank, target = -1;
++    u64 start, end, sz, max_addr = 0;
++    u64 reserved_addr = 0, align, limit;
++    mblock_t mblock;
++
++    align = 1ULL << 20;
++    /* address cannot go beyond 64bit */
++    limit = 0x100000000ULL;
++    /* always allocate from the larger rank */
++    max_rank = mblock_info->mblock_num - 1;
++
++    for (i = 0; i < mblock_info->mblock_num; i++) {
++        start = mblock_info->mblock[i].start;
++        sz = mblock_info->mblock[i].size;
++        end = limit < (start + sz)? limit: (start + sz);
++        reserved_addr = (end - reserved_size);
++        reserved_addr &= ~(align - 1);
++        if ((reserved_addr + reserved_size <= start + sz) &&
++                (reserved_addr >= start) &&
++                (mblock_info->mblock[i].rank <= max_rank) &&
++                (start + sz > max_addr) &&
++                (reserved_addr + reserved_size <= limit)) {
++            max_addr = start + sz;
++            target = i;
++        }
++    }
++
++    if (target < 0) {
++        printf("mblock_reserve error\n");
++        return 0;
++    }
++
++    start = mblock_info->mblock[target].start;
++    sz = mblock_info->mblock[target].size;
++    end = limit < (start + sz)? limit: (start + sz);
++    reserved_addr = (end - reserved_size);
++    reserved_addr &= ~(align - 1);
++
++    return reserved_addr;
++}
++
++/* note that memory is not really reserved */
++static int reserve_tmpmem(mblock_info_t *mblock_info, u32 *addr, u32 size)
++{
++    u64 _addr = mblock_reserve_dryrun(mblock_info, size);
++    if (_addr == 0ULL) {
++        return -1;
++    }
++
++    /* we only reserve memory lower than 32-bit address, thus
++       we can safely convert variable to u32 */
++    *addr = (u32) _addr;
++    return 0;
++}
++
++void sdrpmb_init_set_failed(void)
++{
++    sdrpmb_info.failed = 1;
++    sdrpmb_info.sdrpmb_partaddr = SDRPMB_FAILURE_MAGIC;
++    sdrpmb_info.sdrpmb_partsize = 0;
++}
++
++void tkcore_boot_param_prepare_sdrpmb_region(part_t *part)
++{
++    if (sdrpmb_info.failed || part == NULL) {
++        return;
++    }
++
++    sdrpmb_info.part_id = part->part_id;
++
++    u32 sect = part->start_sect + part->nr_sects;
++
++    if (sect < SDRPMB_REGION_SIZE / 512) {
++        printf("%s: unexpected MMC size: %u sectors\n", MOD, sect);
++        goto err;
++    }
++    sect -= SDRPMB_REGION_SIZE / 512;
++    /* sect % N must be smaller than sect */
++    sect -= sect % (SDRPMB_REGION_ALIGNMENT / 512);
++
++    if (sect < part->start_sect) {
++        printf("%s: unexpected sdrpmb partition start: %u size: %u\n", MOD, part->start_sect, part->nr_sects);
++        goto err;
++    }
++
++    sdrpmb_info.sdrpmb_part_start = part->start_sect;
++
++    sdrpmb_info.sdrpmb_starting_sector = sect;
++    sdrpmb_info.sdrpmb_nr_sectors = SDRPMB_REGION_SIZE / 512;
++
++    return;
++
++err:
++    sdrpmb_init_set_failed();
++}
++
++void tkcore_boot_param_prepare_sdrpmb_data(mblock_info_t *mblock, blkdev_t *bootdev)
++{
++    int ret = 0;
++    u64 start_byte;
++
++    if (sdrpmb_info.failed)
++        return;
++
++    /* check if sdrpmb region is not reserved */
++    if (sdrpmb_info.part_id < 0)
++        return;
++
++    if (mblock == NULL || bootdev == NULL) {
++        ret = -1;
++        goto out;
++    }
++
++    sdrpmb_info.sdrpmb_partsize = SDRPMB_DATA_SIZE << 1;
++    ret = reserve_tmpmem(mblock, &(sdrpmb_info.sdrpmb_partaddr), SDRPMB_DATA_SIZE << 1);
++    if (ret) {
++        printf("%s: reserve memory failed\n", MOD);
++        goto out;
++    }
++
++    /* TODO use sector size instead of the hard coded 512 */
++    start_byte = ((u64) sdrpmb_info.sdrpmb_starting_sector) * 512;
++
++    if ((ret = blkdev_read(bootdev, start_byte, SDRPMB_DATA_SIZE,
++        (u8 *) (sdrpmb_info.sdrpmb_partaddr), sdrpmb_info.part_id))) {
++        printf("%s: read SDRPMB.0 failed", MOD);
++        goto out;
++    }
++
++    if ((ret = blkdev_read(bootdev, start_byte + SDRPMB_REGION_ALIGNMENT,
++        SDRPMB_DATA_SIZE, (u8 *) (sdrpmb_info.sdrpmb_partaddr + SDRPMB_DATA_SIZE),
++        sdrpmb_info.part_id))) {
++        printf("%s: read SDRPMB.1 failed", MOD);
++        goto out;
++    }
++
++out:
++    if (ret)
++        sdrpmb_init_set_failed();
++    return;
++}
++
++void tkcore_boot_sdrpmb_init_finish(u32 param_addr)
++{
++    int ret = 0;
++    tee_arg_t_ptr teearg = (tee_arg_t_ptr) param_addr;
++
++    if (teearg == NULL)
++        return;
++
++    if (sdrpmb_info.failed || sdrpmb_info.part_id < 0) {
++        return;
++    }
++
++    teearg->sdrpmb_partaddr = sdrpmb_info.sdrpmb_partaddr;
++    teearg->sdrpmb_partsize = sdrpmb_info.sdrpmb_partsize;
++    teearg->sdrpmb_starting_sector = sdrpmb_info.sdrpmb_starting_sector - sdrpmb_info.sdrpmb_part_start;
++    teearg->sdrpmb_nr_sectors = sdrpmb_info.sdrpmb_nr_sectors;
++
++    return;
++}
++#endif
++
++void tkcore_boot_param_prepare(u32 param_addr, u32 tee_entry,
++    u64 sec_dram_size, u64 dram_base, u64 dram_size, int meta_uart)
++{
++    tee_arg_t_ptr teearg = (tee_arg_t_ptr) param_addr;
++
++    if (teearg == NULL) {
++        return;
++    }
++
++    /* Prepare TEE boot parameters */
++    teearg->magic = TKCORE_BOOTCFG_MAGIC;
++    teearg->length = sizeof(tee_arg_t);
++    teearg->version = (u64) TEE_ARGUMENT_VERSION;
++    teearg->dRamBase = dram_base;
++    teearg->dRamSize = dram_size;
++    teearg->secDRamBase = tee_entry;
++    teearg->secDRamSize = sec_dram_size;
++    teearg->secIRamBase = TEE_SECURE_ISRAM_ADDR;
++    teearg->secIRamSize = TEE_SECURE_ISRAM_SIZE;
++
++    /* GIC parameters */
++    teearg->total_number_spi = 352;
++    /* SSI Reserve */
++    teearg->ssiq_number = 32 + 296;
++
++    teearg->flags = 0;
++
++    if (meta_uart == 0) {
++#if CFG_BOOT_ARGUMENT_BY_ATAG
++        teearg->uart_base = g_uart;
++        DBG_MSG("%s teearg : CFG_BOOT_ARGUMENT_BY_ATAG 0x%x\n", __func__, g_uart);
++#elif CFG_BOOT_ARGUMENT && !CFG_BOOT_ARGUMENT_BY_ATAG
++        teearg->uart_base = bootarg.log_port;
++        DBG_MSG("%s teearg : CFG_BOOT_ARGUMENT 0x%x\n", __func__, bootarg.log_port);
++#else
++        teearg->uart_base = CFG_UART_LOG;
++        DBG_MSG("%s teearg : log port by prj cfg 0x%x\n", __func__, CFG_UART_LOG);
++#endif
++    } else {
++        teearg->uart_base = 0U;
++    }
++}
++
++void tkcore_dump_param(u32 param_addr)
++{
++    tee_arg_t_ptr teearg = (tee_arg_t_ptr) param_addr;
++
++    DBG_MSG("%s teearg.magic: 0x%x\n", MOD, teearg->magic);
++    DBG_MSG("%s teearg.length: 0x%x\n", MOD, teearg->length);
++    DBG_MSG("%s teearg.version: 0x%x\n", MOD, teearg->version);
++    DBG_MSG("%s teearg.dRamBase: 0x%x\n", MOD, teearg->dRamBase);
++    DBG_MSG("%s teearg.dRamSize: 0x%x\n", MOD, teearg->dRamSize);
++    DBG_MSG("%s teearg.secDRamBase: 0x%x\n", MOD, teearg->secDRamBase);
++    DBG_MSG("%s teearg.secDRamSize: 0x%x\n", MOD, teearg->secDRamSize);
++    DBG_MSG("%s teearg.secIRamBase: 0x%x\n", MOD, teearg->secIRamBase);
++    DBG_MSG("%s teearg.secIRamSize: 0x%x\n", MOD, teearg->secIRamSize);
++    DBG_MSG("%s teearg.gic_dist_base: 0x%x\n", MOD, teearg->gic_distributor_base);
++    DBG_MSG("%s teearg.gic_cpu_base: 0x%x\n", MOD, teearg->gic_cpuinterface_base);
++    DBG_MSG("%s teearg.gic_version: 0x%x\n", MOD, teearg->gic_version);
++    DBG_MSG("%s teearg.uart_base: 0x%x\n", MOD, teearg->uart_base);
++    DBG_MSG("%s teearg.total_number_spi: %d\n", MOD, teearg->total_number_spi);
++    DBG_MSG("%s teearg.ssiq_number: %d\n", MOD, teearg->ssiq_number);
++    DBG_MSG("%s teearg.flags: %x\n", MOD, teearg->flags);
++
++    if (teearg->version >= TEE_ARGUMENT_VERSION_V1_0) {
++        DBG_MSG("%s teearg.rpmb_key_programmed : %d\n",
++            MOD, teearg->rpmb_key_programmed);
++    }
++
++    if (teearg->version >= TEE_ARGUMENT_VERSION_V1_1) {
++        DBG_MSG("%s teearg.nw_bootargs: 0x%x\n", MOD, teearg->nw_bootargs);
++        DBG_MSG("%s teearg.nw_bootargs_size: 0x%x\n", MOD, teearg->nw_bootargs_size);
++    }
++
++    if (teearg->version >= TEE_ARGUMENT_VERSION_V1_2) {
++        DBG_MSG("%s teearg.sdrpmb_partaddr: 0x%x\n",
++            MOD, teearg->sdrpmb_partaddr);
++        DBG_MSG("%s teearg.sdrpmb_partsize: 0x%x\n",
++            MOD, teearg->sdrpmb_partsize);
++        DBG_MSG("%s teearg.sdrpmb_starting_sector: 0x%x\n",
++            MOD, teearg->sdrpmb_starting_sector);
++        DBG_MSG("%s teearg.sdrpmb_nr_sectors: 0x%x\n",
++            MOD, teearg->sdrpmb_nr_sectors);
++    }
++}
++
++void tkcore_boot_param_prepare_nwbootargs(u32 param_addr, u32 addr, u32 size)
++{
++    tee_arg_t_ptr teearg = (tee_arg_t_ptr) param_addr;
++
++    if (teearg == NULL)
++        return;
++
++    teearg->nw_bootargs = addr;
++    teearg->nw_bootargs_size = size;
++}
++
++void tkcore_boot_param_prepare_rpmbkey(u32 param_addr, u8 *rpmb_key, u32 rpmb_keylen)
++{
++    tee_arg_t_ptr teearg = (tee_arg_t_ptr) param_addr;
++
++    if (teearg == NULL) {
++        return ;
++    }
++
++    if (rpmb_keylen != RPMB_KEY_SIZE) {
++        return ;
++    }
++
++    memcpy(teearg->rpmb_key, rpmb_key, RPMB_KEY_SIZE);
++    teearg->rpmb_key_programmed = 1;
++}

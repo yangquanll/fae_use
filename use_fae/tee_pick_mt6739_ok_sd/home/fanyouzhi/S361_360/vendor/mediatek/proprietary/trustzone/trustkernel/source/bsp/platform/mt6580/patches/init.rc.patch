@@ -1,0 +1,44 @@
+diff --git a/factory_init.rc b/factory_init.rc
+index ecf6d37..7638237 100644
+--- a/factory_init.rc
++++ b/factory_init.rc
+@@ -7,6 +7,7 @@ import factory_init.connectivity.rc
+ import /init.environ.rc
+ import init.fon.rc
+ import init.trustonic.rc
++import /vendor/etc/init/trustkernel.rc
+ import init.nvdata.rc
+ import init.aee.rc
+ 
+diff --git a/init.mt6580.rc b/init.mt6580.rc
+index f584fa5..c4f452f 100755
+--- a/init.mt6580.rc
++++ b/init.mt6580.rc
+@@ -1565,3 +1566,7 @@ service fingerprintd /system/bin/fingerprintd
+     class late_start
+     user system
+ #sunwave fingerprint
++
++service fingerprintd /system/bin/fingerprintd
++    class late_start
++    user system
+diff --git a/meta_init.rc b/meta_init.rc
+index c78c69a..df46f6b 100644
+--- a/meta_init.rc
++++ b/meta_init.rc
+@@ -7,6 +7,7 @@ import /init.environ.rc
+ import init.fon.rc
+ import init.aee.rc
+ import init.trustonic.rc
++import /vendor/etc/init/trustkernel.rc
+ import init.nvdata.rc
+ import meta_init.connectivity.rc
+ import meta_init.project.rc
+@@ -497,6 +497,7 @@ service adbd /sbin/adbd --root_seclabel=u:r:su:s0
+
+ #INTERNAL_START
+ service meta_tst /vendor/bin/meta_tst
++    class late_start
+
+ service nvram_daemon /vendor/bin/nvram_daemon
+     class main

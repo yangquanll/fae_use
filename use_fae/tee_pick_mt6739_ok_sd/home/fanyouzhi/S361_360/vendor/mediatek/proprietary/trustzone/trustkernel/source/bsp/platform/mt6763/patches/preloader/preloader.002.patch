@@ -1,0 +1,68 @@
+diff --git a/platform/mt6763/src/security/trustzone/tz_init.c b/platform/mt6763/src/security/trustzone/tz_init.c
+index 1445a06..5cf9c6a 100644
+--- a/platform/mt6763/src/security/trustzone/tz_init.c
++++ b/platform/mt6763/src/security/trustzone/tz_init.c
+@@ -80,7 +80,11 @@
+ /**************************************************************************
+  *  MACROS
+  **************************************************************************/
++#ifdef CFG_TRUSTKERNEL_TEE_SUPPORT
++#define TEE_MEM_ALIGNMENT (0x100000)  //1MB Alignment
++#else
+ #define TEE_MEM_ALIGNMENT (0x1000)  //4K Alignment
++#endif
+ 
+ #if CFG_BOOT_ARGUMENT
+ #define bootarg g_dram_buf->bootarg
+@@ -124,7 +128,11 @@ static u32 tee_extra_mem_size = 0;
+ void tee_get_secmem_start(u32 *addr)
+ {
+ #if CFG_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++    *addr = tee_secmem_start + tee_secmem_size;
++#else
+     *addr = tee_secmem_start - ATF_LOG_BUFFER_SIZE;
++#endif
+ #else
+     *addr = atf_log_buf_start;
+ #endif
+@@ -133,7 +141,11 @@ void tee_get_secmem_start(u32 *addr)
+ void tee_get_secmem_size(u32 *size)
+ {
+ #if CFG_TEE_SUPPORT
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++    *size = ATF_LOG_BUFFER_SIZE;
++#else
+     *size = tee_secmem_size + ATF_LOG_BUFFER_SIZE;
++#endif
+ #else
+     *size = ATF_LOG_BUFFER_SIZE;
+ #endif
+@@ -230,6 +242,13 @@ u32 tee_get_load_addr(u32 maddr)
+             (u32)(limit_addr - align_addr));
+         BUG_ON(1);
+     }
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++    limit_addr = 0xF0000000;
++    DBG_MSG("%s align_addr: 0x%llx, limit_addr: 0x%llx\n", MOD, align_addr, limit_addr);
++    tee_secmem_start = (u32)mblock_reserve_ext(&bootarg.mblock_info,
++        (u64)(tee_secmem_size + ATF_LOG_BUFFER_SIZE), (u64)TEE_MEM_ALIGNMENT,
++        limit_addr, 0, "tee-reserved");
++    DBG_MSG("%s TEE reserved_addr: 0x%x, reserved_size: 0x%x\n", MOD, tee_secmem_start, tee_secmem_size + ATF_LOG_BUFFER_SIZE);
+ #else /* CFG_TRUSTONIC_TEE_SUPPORT */
+     limit_addr = 0x80000000;
+     DBG_MSG("%s align_addr: 0x%llx, limit_addr: 0x%llx\n", MOD, align_addr, limit_addr);
+@@ -245,8 +264,13 @@ u32 tee_get_load_addr(u32 maddr)
+         return 0;
+     }
+ 
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++    atf_log_buf_start = tee_secmem_start + tee_secmem_size;
++    tee_secmem_start = tee_secmem_start;
++#else
+     atf_log_buf_start = tee_secmem_start;
+     tee_secmem_start = tee_secmem_start + ATF_LOG_BUFFER_SIZE;
++#endif
+ 
+ allocated:
+     ret_addr = tee_secmem_start - tee_extra_mem_size;

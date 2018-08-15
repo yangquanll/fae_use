@@ -1,0 +1,53 @@
+diff --git a/platform/mt6757/src/security/trustzone/tz_init.c b/platform/mt6757/src/security/trustzone/tz_init.c
+index 8bdd094..a033e8b 100644
+--- a/platform/mt6757/src/security/trustzone/tz_init.c
++++ b/platform/mt6757/src/security/trustzone/tz_init.c
+@@ -79,7 +79,11 @@
+ /**************************************************************************
+  *  MACROS
+  **************************************************************************/
++#if CFG_TRUSTKERNEL_TEE_SUPPORT
++#define TEE_MEM_ALIGNMENT (0x100000)    //1MB Alignment
++#else
+ #define TEE_MEM_ALIGNMENT (0x1000)  //4K Alignment
++#endif
+ 
+ #if CFG_BOOT_ARGUMENT
+ #define bootarg g_dram_buf->bootarg
+@@ -123,6 +127,8 @@ void tee_get_secmem_start(u32 *addr)
+ #if CFG_MICROTRUST_TEE_SUPPORT
+ 	/* |--- TEEI ---|--- ATF LOG ---| */
+ 	*addr = tee_secmem_start + tee_secmem_size; /* The address of ATF LOG Buffer */
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++	*addr = tee_secmem_start + tee_secmem_size;
+ #else
+     *addr = tee_secmem_start - ATF_LOG_BUFFER_SIZE;
+ #endif
+@@ -136,6 +142,8 @@ void tee_get_secmem_size(u32 *size)
+ #if CFG_TEE_SUPPORT
+ #if CFG_MICROTRUST_TEE_SUPPORT
+ 	*size = ATF_LOG_BUFFER_SIZE; /* Only for the size of ATF LOG Buffer */
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++	*size = ATF_LOG_BUFFER_SIZE; /* Only for the size of ATF LOG Buffer */
+ #else
+     *size = tee_secmem_size + ATF_LOG_BUFFER_SIZE;
+ #endif
+@@ -213,7 +221,7 @@ u32 tee_get_load_addr(u32 maddr)
+     DBG_MSG("%s maddr: 0x%x, tee_extra_mem_size: 0x%x, tee_secmem_size: 0x%x\n", MOD, maddr, tee_extra_mem_size, tee_secmem_size);
+ 
+ #if CFG_TRUSTKERNEL_TEE_SUPPORT
+-    limit_addr = 0xC0000000;
++    limit_addr = 0xF0000000;
+ #endif
+ 
+ 
+@@ -252,6 +260,9 @@ u32 tee_get_load_addr(u32 maddr)
+     /* |--- TEEI ---|--- ATF LOG ---| */
+     atf_log_buf_start = tee_secmem_start + tee_secmem_size;
+     tee_secmem_start = tee_secmem_start;
++#elif CFG_TRUSTKERNEL_TEE_SUPPORT
++    atf_log_buf_start = tee_secmem_start + tee_secmem_size;
++    tee_secmem_start = tee_secmem_start;
+ #else
+     atf_log_buf_start = tee_secmem_start;
+     tee_secmem_start = tee_secmem_start + ATF_LOG_BUFFER_SIZE;

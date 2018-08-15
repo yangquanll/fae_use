@@ -1,0 +1,45 @@
+diff --git a/device/mediatek/mt6757/factory_init.rc b/device/mediatek/mt6757/factory_init.rc
+index ffd31ab..00b4f14 100644
+--- a/device/mediatek/mt6757/factory_init.rc
++++ b/device/mediatek/mt6757/factory_init.rc
+@@ -2,6 +2,8 @@ import /init.environ.rc
+ import init.fon.rc
+ import init.trustonic.rc
+ import init.microtrust.rc
++import /vendor/etc/init/trustkernel.rc
++
+
+ on early-init
+     # Set init and its forked children's oom_adj.
+diff --git a/device/mediatek/mt6757/init.mt6757.rc b/device/mediatek/mt6757/init.mt6757.rc
+index bec9298..5effd07 100644
+--- a/device/mediatek/mt6757/init.mt6757.rc
++++ b/device/mediatek/mt6757/init.mt6757.rc
+@@ -1542,3 +1547,7 @@ on property:service.mbim.enable=0
+ on property:service.mbim.enable=1
+     start mbimd
+
++service fingerprintd /system/bin/fingerprintd
++	class late_start
++	user system
++	group system
+diff --git a/device/mediatek/mt6757/meta_init.rc b/device/mediatek/mt6757/meta_init.rc
+index 1c36a76..454863b 100755
+--- a/device/mediatek/mt6757/meta_init.rc
++++ b/device/mediatek/mt6757/meta_init.rc
+@@ -11,6 +11,7 @@ import meta_init.project.rc
+ #Make sure meta_init.modem.rc is the last rc file.
+ import meta_init.modem.rc
+ import init.microtrust.rc
++import /vendor/etc/init/trustkernel.rc
+
+ on early-init
+     # Set init and its forked children's oom_adj.
+@@ -497,6 +497,7 @@ service adbd /sbin/adbd --root_seclabel=u:r:su:s0
+
+ #INTERNAL_START
+ service meta_tst /vendor/bin/meta_tst
++    class late_start
+
+ service nvram_daemon /vendor/bin/nvram_daemon
+     class main

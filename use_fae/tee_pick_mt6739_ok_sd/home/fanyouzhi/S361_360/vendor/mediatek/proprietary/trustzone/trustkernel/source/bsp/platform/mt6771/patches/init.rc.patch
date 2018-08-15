@@ -1,0 +1,63 @@
+diff --git a/device.mk b/device.mk
+index d16f90c..328e4c4 100644
+--- a/device.mk
++++ b/device.mk
+@@ -28,6 +28,12 @@ endif
+ PRODUCT_COPY_FILES += device/mediatek/mt6739/media_profiles.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles.xml:mtk
+ PRODUCT_PROPERTY_OVERRIDES += media.settings.xml=/vendor/etc/media_profiles.xml
+ 
++# TrustKernel add start 20171205
++ifeq ($(strip $(TRUSTKERNEL_TEE_SUPPORT)), yes)
++$(call inherit-product, vendor/mediatek/proprietary/trustzone/trustkernel/source/bsp/platform/common/scripts/device_trustkernel.mk)
++endif
++# TrustKernel add end 20171205
++
+ PRODUCT_COPY_FILES += frameworks/native/data/etc/android.hardware.location.gps.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.location.gps.xml
+ PRODUCT_COPY_FILES += frameworks/native/data/etc/android.hardware.wifi.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.wifi.xml
+ PRODUCT_COPY_FILES += frameworks/native/data/etc/android.hardware.wifi.direct.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.wifi.direct.xml
+@@ -1339,7 +1345,7 @@ endif
+ PRODUCT_COPY_FILES += device/mediatek/mt6739/init.mt6739.rc:$(MTK_TARGET_VENDOR_RC)/init.mt6739.rc
+ PRODUCT_COPY_FILES += device/mediatek/mt6739/factory_init.rc:$(MTK_TARGET_VENDOR_RC)/factory_init.rc
+ PRODUCT_COPY_FILES += device/mediatek/mt6739/init.modem.rc:$(MTK_TARGET_VENDOR_RC)/init.modem.rc
+-
++$(warning "[trustkernel] MTK_TARGET_VENDOR_RC : ${MTK_TARGET_VENDOR_RC}")
+ 
+ ifeq ($(strip $(MTK_FAT_ON_NAND)),yes)
+ PRODUCT_COPY_FILES += device/mediatek/mt6739/init.fon.rc:$(MTK_TARGET_VENDOR_RC)/init.fon.rc
+diff --git a/factory_init.rc b/factory_init.rc
+index 1fbff2a..2f0b482 100644
+--- a/factory_init.rc
++++ b/factory_init.rc
+@@ -8,6 +8,7 @@ import /init.environ.rc
+ import ${ro.mtkrc.path}init.fon.rc
+ import ${ro.mtkrc.path}init.nvdata.rc
+ import /vendor/etc/init/trustonic.rc
++import /vendor/etc/init/trustkernel.rc
+ import /vendor/etc/init/microtrust.rc
+ import /vendor/etc/init/hw/init.aee.rc
+ 
+diff --git a/meta_init.rc b/meta_init.rc
+index 64f9cdb..03d8cf3 100644
+--- a/meta_init.rc
++++ b/meta_init.rc
+@@ -10,6 +10,7 @@ import ${ro.mtkrc.path}meta_init.connectivity.rc
+ import /vendor/etc/init/hw/meta_init.project.rc
+ import /vendor/etc/init/trustonic.rc
+ import /vendor/etc/init/microtrust.rc
++import /vendor/etc/init/trustkernel.rc
+ #Make sure meta_init.modem.rc is the last rc file.
+ import ${ro.mtkrc.path}meta_init.modem.rc
+ 
+diff --git a/ueventd.mt6739.emmc.rc b/ueventd.mt6739.emmc.rc
+index 7a2424c..1b42275 100644
+--- a/ueventd.mt6771.emmc.rc
++++ b/ueventd.mt6771.emmc.rc
+@@ -122,3 +122,8 @@
+ 
+ #MTK In-House TEE
+ /dev/ttyACM0              0660   radio      radio
++
++
++#TrustKernel add start 20171205
++/dev/tkcoredrv           0666    root      root
++/dev/block/platform/bootdevice/by-name/sdrpmb 0660    root    system

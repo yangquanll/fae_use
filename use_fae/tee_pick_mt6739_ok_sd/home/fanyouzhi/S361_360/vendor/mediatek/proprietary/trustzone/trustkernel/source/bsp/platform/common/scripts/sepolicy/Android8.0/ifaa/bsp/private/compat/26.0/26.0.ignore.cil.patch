@@ -1,0 +1,15 @@
+diff --git a/mediatek/sepolicy/bsp/private/compat/26.0/26.0.ignore.cil b/mediatek/sepolicy/bsp/private/compat/26.0/26.0.ignore.cil
+index 5c79795..b1383eb 100755
+--- a/mediatek/sepolicy/bsp/private/compat/26.0/26.0.ignore.cil
++++ b/mediatek/sepolicy/bsp/private/compat/26.0/26.0.ignore.cil
+@@ -44,6 +44,10 @@
+     met_log_d_exec
+     met_log_d_tmpfs
+     mtk_fullscreen_switch_service
++	ifaa
++	ifaa_exec
++	ifaa_tmpfs
++	ifaa_service
+ ))
+ 
+ ;; private_objects - a collection of types that were labeled differently in

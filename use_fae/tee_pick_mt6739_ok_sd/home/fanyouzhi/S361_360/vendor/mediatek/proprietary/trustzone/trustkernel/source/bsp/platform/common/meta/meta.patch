@@ -1,0 +1,55 @@
+diff --git a/Android.mk b/Android.mk
+--- a/Android.mk
++++ b/Android.mk
+@@ -37,6 +37,11 @@ LOCAL_SRC_FILES := \
+     src/UsbRxWatcher.cpp\
+     src/PortHandle.cpp\
+     src/ExternalFunction.cpp
++ifeq ($(TRUSTKERNEL_TEE_SUPPORT), yes)
++LOCAL_SRC_FILES += src/TrustkernelExternal.cpp
++LOCAL_CFLAGS += -DTRUSTKERNEL_TEE_META
++LOCAL_SHARED_LIBRARIES += libpl
++LOCAL_SHARED_LIBRARIES += libkphproxy
++endif
+ 
+ LOCAL_C_INCLUDES := $(LOCAL_PATH)/inc
+ 
+diff --git a/src/FtModule.cpp b/src/FtModule.cpp
+--- a/src/FtModule.cpp
++++ b/src/FtModule.cpp
+@@ -20,6 +20,8 @@
+ #include "hardware/ccci_intf.h"
+ #include "ExternalFunction.h"
+- 
++#ifdef TRUSTKERNEL_TEE_META
++#include "TrustkernelExternalCommand.h"
++#endif
+ #define SIM_SWITCH_MODE_FILE  "/sys/mtk_ssw/mode"
+ #define SIM_SWITCH_MODE_STR_LEN 8
+ 
+@@ -1916,7 +1918,24 @@ void FtModCustomer::exec(Frame *pFrm)
+ 	}
+ 	memcpy(peer_buf, pFrm->peerBuf(), pFrm->peerLen());
+ 	peer_buff_size = pFrm->peerLen();
+-	
++#ifdef TRUSTKERNEL_TEE_META
++    /* ret == 1 means this command is NOT a TRUSTKERNEL meta buf.
++     * Therefore, you are free to let other handlers to
++     * handle this customer op.
++     *
++     * ret < 0 means error happens in this handler
++     */
++
++    int ret;
++    if ((ret = handle_trustkernel_meta_command(
++        req->cmd.m_u1Dummy,
++        &peer_buf, &peer_buff_size,
++        &ft_cnf.result.m_u1Dummy)) < 0) {
++        META_LOG("handle_trustkernel_meta_command internal error\n");
++    }
++
++    /* other customer op handlers follow here, if ret == 1 */
++#endif
+ 	META_LOG("[Meta][FT] FT_CUSTOMER_OP successful, OP type is %d!", req->type);
+ 	
+     WriteDataToPC(&ft_cnf, sizeof(ft_cnf), peer_buf, peer_buff_size);

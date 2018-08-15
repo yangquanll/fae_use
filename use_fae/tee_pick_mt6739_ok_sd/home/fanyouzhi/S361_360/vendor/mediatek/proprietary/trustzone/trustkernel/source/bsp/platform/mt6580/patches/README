@@ -1,0 +1,2 @@
+To enable SDRPMB, you shall apply preloader.patch before
+applying mt6580_preloader_sdrpmb.patch.

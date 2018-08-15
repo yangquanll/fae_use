@@ -1,0 +1,124 @@
+commit 4307be5d1fe6305cb3e86c448dc27607f050bd6f
+Author: git <git@trustkernel.com>
+Date:   Fri May 19 00:35:11 2017 +0800
+
+    002.spi.patch
+
+diff --git a/drivers/spi/mediatek/mt6755/Makefile b/drivers/spi/mediatek/mt6755/Makefile
+index ace803f..c5fb5f8 100644
+--- a/drivers/spi/mediatek/mt6755/Makefile
++++ b/drivers/spi/mediatek/mt6755/Makefile
+@@ -8,4 +8,8 @@ ifeq ($(CONFIG_TRUSTONIC_TEE_SUPPORT),y)
+ 	include $(srctree)/drivers/misc/mediatek/gud/Makefile.include
+ endif
+ 
++ifeq ($(CONFIG_TRUSTKERNEL_TEE_SUPPORT),y)
++subdir-ccflags-y += -I$(srctree)/drivers/misc/mediatek/tkcore/include/linux
++endif
++
+ obj-$(CONFIG_MTK_SPI) += spi.o spi-dev.o
+--- a/drivers/spi/mediatek/mt6755/spi.c
++++ b/drivers/spi/mediatek/mt6755/spi.c
+@@ -49,6 +49,19 @@
+ #include <mach/mt_clkmgr.h>
+ #endif				/* defined(CONFIG_MTK_CLKMGR) */
+ 
++#ifdef CONFIG_TRUSTKERNEL_TEE_SUPPORT
++#define SPI_TRUSTKERNEL_TEE_SUPPORT
++
++#ifdef CONFIG_TRUSTKERNEL_TEE_FP_SUPPORT
++#define SPI_CLK_TRUSTKERNEL_TEE_SUPPORT
++#endif
++
++#endif
++
++#ifdef SPI_TRUSTKERNEL_TEE_SUPPORT
++#include <tee_kernel_lowlevel_api.h>
++#endif
++
+ #if (defined(CONFIG_MTK_FPGA))
+ #define  CONFIG_MT_SPI_FPGA_ENABLE
+ #endif
+@@ -158,7 +171,7 @@ static void spi_dump_reg(struct mt_spi_t *ms)
+ }
+ #else
+ #define SPI_INFO(dev, fmt, args...)
+-static void spi_dump_reg(struct mt_spi_t *ms)
++static void __used spi_dump_reg(struct mt_spi_t *ms)
+ {
+ }
+ #endif
+@@ -401,6 +414,8 @@ static int is_pause_mode(struct spi_message *msg)
+ 	return conf->pause;
+ }
+ 
++#ifndef SPI_TRUSTKERNEL_TEE_SUPPORT
++
+ static int is_fifo_read(struct spi_message *msg)
+ {
+ 	struct mt_chip_conf *conf;
+@@ -411,6 +426,8 @@ static int is_fifo_read(struct spi_message *msg)
+ 	return value;
+ }
+ 
++#endif
++
+ static int is_interrupt_enable(struct mt_spi_t *ms)
+ {
+ 	u32 cmd;
+@@ -1015,6 +1032,22 @@ static int mt_spi_transfer(struct spi_device *spidev, struct spi_message *msg)
+ 
+ }
+ 
++#ifdef SPI_TRUSTKERNEL_TEE_SUPPORT
++
++#define SMC_SPI_IRQ	0xbf000101
++
++static irqreturn_t mt_spi_interrupt(int irq, void *dev_id)
++{
++	struct smc_param param;
++
++	param.a0 = SMC_SPI_IRQ;
++	tee_smc_call(&param);
++
++	return IRQ_HANDLED;
++}
++
++#else
++
+ static irqreturn_t mt_spi_interrupt(int irq, void *dev_id)
+ {
+ 	struct mt_spi_t *ms = (struct mt_spi_t *)dev_id;
+@@ -1092,6 +1125,8 @@ static irqreturn_t mt_spi_interrupt(int irq, void *dev_id)
+ 	return IRQ_NONE;
+ }
+ 
++#endif
++
+ /* Write chip configuration to HW register */
+ static int mt_do_spi_setup(struct mt_spi_t *ms, struct mt_chip_conf *chip_config)
+ {
+@@ -1284,6 +1319,12 @@ static void mt_spi_cleanup(struct spi_device *spidev)
+ 
+ }
+ 
++#ifdef SPI_CLK_TRUSTKERNEL_TEE_SUPPORT
++int tee_register_spi_clk(void (*) (struct mt_spi_t *), void (*) (struct mt_spi_t *), struct mt_spi_t *);
++int tee_spi_transfer_disable(void);
++#endif
++
++
+ static int __init mt_spi_probe(struct platform_device *pdev)
+ {
+ 	int ret = 0;
+@@ -1449,6 +1490,10 @@ static int __init mt_spi_probe(struct platform_device *pdev)
+ 		dev_err(&pdev->dev, "spi_register_master fails.\n");
+ 		goto out_free;
+ 	} else {
++#ifdef SPI_CLK_TRUSTKERNEL_TEE_SUPPORT
++		/* tee_spi_transfer_disable(); */
++		tee_register_spi_clk(enable_clk, disable_clk, ms);
++#endif
+ 		SPI_DBG("spi register master success.\n");
+ 		return 0;
+ 	}

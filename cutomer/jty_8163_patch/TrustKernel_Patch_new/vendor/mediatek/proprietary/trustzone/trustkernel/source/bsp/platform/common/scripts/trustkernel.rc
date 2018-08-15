@@ -1,0 +1,33 @@
+on post-fs
+	write /proc/bootprof "tkcore: prep SYSTA"
+	chown system system /vendor/app/t6
+
+	write /proc/bootprof "tkcore: prep PP"
+
+	start teed
+
+on post-fs-data
+	write /proc/bootprof "tkcore: prep SFS"
+	mkdir /data/tee
+	chown system system /data/tee
+	restorecon /data/tee
+
+	write /proc/bootprof "tkcore: prep SPTA"
+	mkdir /data/tee/t6
+	chown system system /data/tee/t6
+	restorecon /data/tee/t6
+
+on property:trustkernel.log.state=ready
+	write /proc/bootprof "tkcore: prep log"
+	restorecon /data/tee/tkcore.log
+	setprop trustkernel.log.state enable
+
+on post-fs
+	mkdir /vendor/protect_f/tee
+	chown system system /vendor/protect_f/tee/
+	restorecon /vendor/protect_f/tee
+
+service teed /vendor/bin/teed --systapath /vendor/app/t6 --sdrpmbdev /dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/sdrpmb --prot /vendor/protect_f/tee
+	user system
+	group system
+	class core

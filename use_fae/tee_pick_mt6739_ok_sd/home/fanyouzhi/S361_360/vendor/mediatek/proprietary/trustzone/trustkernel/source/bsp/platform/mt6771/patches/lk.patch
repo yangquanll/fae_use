@@ -1,0 +1,156 @@
+diff --git a/kernel/main.c b/kernel/main.c
+index 763c620..69d5563 100644
+--- a/kernel/main.c
++++ b/kernel/main.c
+@@ -165,6 +165,9 @@ void kmain(void)
+ #endif
+ }
+ 
++#if defined(MTK_TRUSTKERNEL_TEE_SUPPORT)
++void tkcore_wp_init(void);
++#endif
+ 
+ static int bootstrap2(void *arg)
+ {
+@@ -186,6 +189,10 @@ static int bootstrap2(void *arg)
+ 	dprintf(SPEW, "initializing platform\n");
+ 	platform_init();
+ 
++#if defined(MTK_TRUSTKERNEL_TEE_SUPPORT)
++    tkcore_wp_init();
++#endif
++
+ 	// initialize the target
+ 	dprintf(SPEW, "initializing target\n");
+ 	target_init();
+diff --git a/kernel/rules.mk b/kernel/rules.mk
+index 2fbeea8..af3457a 100644
+--- a/kernel/rules.mk
++++ b/kernel/rules.mk
+@@ -16,3 +16,7 @@ OBJS += \
+ 	$(LOCAL_DIR)/thread.o \
+ 	$(LOCAL_DIR)/timer.o
+ 
++ifeq ($(MTK_TRUSTKERNEL_TEE_SUPPORT),yes)
++OBJS += \
++    $(LOCAL_DIR)/tkcore_wp.o
++endif
+diff --git a/kernel/tkcore_wp.c b/kernel/tkcore_wp.c
+new file mode 100644
+index 0000000..97241da
+--- /dev/null
++++ b/kernel/tkcore_wp.c
+@@ -0,0 +1,86 @@
++#include <platform/partition.h>
++#include <debug.h>
++
++#define CMD_SDRPMB_ACTIVE_STATE 0xBF000200
++#define CMD_SDRPMB_REGION_INFO  0xBF000201
++
++uint32_t tkcore_smc(uint32_t smc_id, uint32_t *a, uint32_t *b)
++{
++    uint32_t r, p, q;
++    __asm__ __volatile__(
++        "mov r0, %[smcid]\n"
++        "smc #0x0\n"
++        "mov %[arg0], r0\n"
++        "mov %[arg1], r1\n"
++        "mov %[arg2], r2\n":
++            [arg0]"=r"(r),
++            [arg1]"=r"(p),
++            [arg2]"=r"(q):
++
++            [smcid]"r"(smc_id):
++            "cc", "r0", "r1" ,"r2", "r3"
++    );
++
++    *a = p;
++    *b = q;
++    return r;
++}
++
++void tkcore_wp_init(void)
++{
++    int r;
++    uint32_t active_id, status, start_sect, nr_sects;
++
++    part_t *part = mt_part_get_partition("sdrpmb");
++
++    if (part == NULL)
++        return;
++
++    if ((tkcore_smc(CMD_SDRPMB_ACTIVE_STATE, &active_id, &status))) {
++        dprintf(CRITICAL, "Get SDRPMB active state failed\n");
++        return;
++    }
++
++    if ((tkcore_smc(CMD_SDRPMB_REGION_INFO, &start_sect, &nr_sects))) {
++        dprintf(CRITICAL, "Get SDRPMB region info failed\n");
++        return;
++    }
++
++    dprintf(CRITICAL, "active_id: %u status: %u\n", active_id, status);
++    dprintf(CRITICAL, "start_sect: %u nr_sectors: %u\n", start_sect, nr_sects);
++
++    if (status == 2) {
++        /* partition needs to be protected */
++        dprintf(ALWAYS, "SDRPMB region cannot be initialized. WP the whole region\n");
++        if ((r = mmc_set_write_protect(0, EMMC_PART_USER,
++                start_sect + part->start_sect,
++                nr_sects, WP_POWER_ON))) {
++            dprintf(CRITICAL, "SDRPMB: WP the whole region failed with %d\n", r);
++        }
++    } else {
++        if (active_id == 0) {
++            dprintf(CRITICAL, "SDRPMB[1]: SET WP (%lu, %u)\n",
++                start_sect + part->start_sect + nr_sects / 2,
++                nr_sects / 2);
++
++            if ((r = mmc_set_write_protect(0, EMMC_PART_USER,
++                start_sect + part->start_sect + nr_sects / 2,
++                nr_sects / 2, WP_POWER_ON))) {
++                dprintf(CRITICAL, "SDRPMB[1]: SET WP failed with %d\n", r);
++                goto out;
++            }
++        } else if (active_id == 1) {
++           dprintf(CRITICAL, "SDRPMB[0]: SET WP (%lu, %u)\n",
++                start_sect + part->start_sect, nr_sects / 2);
++
++            if ((r = mmc_set_write_protect(0, EMMC_PART_USER,
++                start_sect + part->start_sect,
++                nr_sects / 2, WP_POWER_ON))) {
++                dprintf(CRITICAL, "SDRPMB[0]: SET WP failed with %d\n", r);
++                goto out;
++            }
++        }
++    }
++out:
++    return;
++}
+diff --git a/platform/mt6739/rules.mk b/platform/mt6739/rules.mk
+index 8593344..9081734 100644
+--- a/platform/mt6739/rules.mk
++++ b/platform/mt6739/rules.mk
+@@ -476,6 +476,10 @@ ifeq ($(RDA_STATUS_SUPPORT),yes)
+ DEFINES += RDA_STATUS_SUPPORT
+ endif
+ 
++ifeq ($(MTK_TRUSTKERNEL_TEE_SUPPORT),yes)
++DEFINES += MTK_TRUSTKERNEL_TEE_SUPPORT
++endif
++
+ ifeq ($(MTK_GOOGLE_TRUSTY_SUPPORT),yes)
+ DEFINES += MTK_GOOGLE_TRUSTY_SUPPORT
+ endif
+diff --git a/project/k39tv1_bsp_1g.mk b/project/k39tv1_bsp_1g.mk
+index fff0545..eabf9e7 100644
+--- a/project/k39tv1_bsp_1g.mk
++++ b/project/k39tv1_bsp_1g.mk
+@@ -37,6 +37,7 @@ MTK_TINYSYS_SSPM_SUPPORT = no
+ #DEFINES += FPGA_BOOT_FROM_LK=y
+ MTK_PROTOCOL1_RAT_CONFIG = C/Lf/Lt/W/T/G
+ MTK_GOOGLE_TRUSTY_SUPPORT = no
++MTK_TRUSTKERNEL_TEE_SUPPORT = yes
+ MCUPM_FW_USE_PARTITION = yes
+ MTK_DM_VERITY_OFF = yes
+ MTK_DYNAMIC_CCB_BUFFER_GEAR_ID =

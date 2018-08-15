@@ -1,0 +1,62 @@
+diff --git a/src/FtModule.cpp b/src/FtModule.cpp
+index b01ddd7..a68b10c 100755
+--- a/src/FtModule.cpp
++++ b/src/FtModule.cpp
+@@ -21,6 +21,9 @@
+ #include "hardware/ccci_intf.h"
+ #include "wifi_api.h"
+ #include "MSocket.h"
++#ifdef TRUSTKERNEL_TEE_META
++#include "TrustkernelExternalCommand.h"
++#endif
+ 
+ #define SIM_SWITCH_MODE_FILE  "/sys/mtk_ssw/mode"
+ #define SIM_SWITCH_MODE_STR_LEN 8
+@@ -2171,10 +2174,36 @@ void FtModCustomer::exec(Frame *pFrm)
+     ft_cnf.header.token = req->header.token;
+     ft_cnf.type = req->type;
+     ft_cnf.status = META_SUCCESS;
+-
++
++#ifdef TRUSTKERNEL_TEE_META
++     peer_buf = (char*)malloc(pFrm->peerLen());
++     if (peer_buf == NULL)
++     {
++         META_LOG("[Meta][FT] Ft_Customer malloc fail");
++         return;
++     }
++     memcpy(peer_buf, pFrm->peerBuf(), pFrm->peerLen());
++     peer_buff_size = pFrm->peerLen();
++
++    /* ret == 1 means this command is NOT a TRUSTKERNEL meta buf.
++     * Therefore, you are free to let other handlers to
++     * handle this customer op.
++     *
++     * ret < 0 means error happens in this handler
++     */
++
++    int ret;
++    if ((ret = handle_trustkernel_meta_command(
++        req->cmd.m_u1Dummy,
++        &peer_buf, &peer_buff_size,
++        &ft_cnf.result.m_u1Dummy)) < 0) {
++        META_LOG("handle_trustkernel_meta_command internal error\n");
++    }
++
++    /* other customer op handlers follow here, if ret == 1 */
++#else
+ 	peer_buf = (char*)malloc(peer_buff_size);
+ 	memset(peer_buf, 0, peer_buff_size);
+-
+ 	META_LOG("[Meta][FT] setNormalModeTestFlag");
+ 	setResult = setNormalModeTestFlag(req->cmd.m_u1Dummy);
+ 	if(0 == setResult)
+@@ -2185,7 +2214,7 @@ void FtModCustomer::exec(Frame *pFrm)
+ 	{
+ 	    ft_cnf.status = META_FAILED;
+ 	}
+-	
++#endif
+ 	META_LOG("[Meta][FT] FT_CUSTOMER_OP successful, OP type is %d!", req->type);
+ 	
+     WriteDataToPC(&ft_cnf, sizeof(ft_cnf), peer_buf, peer_buff_size);

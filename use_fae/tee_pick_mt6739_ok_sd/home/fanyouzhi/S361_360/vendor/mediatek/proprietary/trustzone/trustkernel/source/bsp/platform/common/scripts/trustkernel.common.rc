@@ -1,0 +1,23 @@
+on post-fs
+	write /proc/bootprof "tkcore: prep SYSTA"
+	chown system system /vendor/app/t6
+
+	write /proc/bootprof "tkcore: prep PP"
+
+	start teed
+
+on post-fs-data
+	write /proc/bootprof "tkcore: prep SFS"
+	mkdir /data/tee
+	chown system system /data/tee
+	restorecon /data/tee
+
+	write /proc/bootprof "tkcore: prep SPTA"
+	mkdir /data/tee/t6
+	chown system system /data/tee/t6
+	restorecon /data/tee/t6
+
+on property:trustkernel.log.state=ready
+	write /proc/bootprof "tkcore: prep log"
+	restorecon /data/tee/tkcore.log
+	setprop trustkernel.log.state enable

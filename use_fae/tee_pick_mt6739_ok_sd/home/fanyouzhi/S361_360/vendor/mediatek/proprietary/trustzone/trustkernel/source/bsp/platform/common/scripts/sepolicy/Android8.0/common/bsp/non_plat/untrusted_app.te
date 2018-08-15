@@ -1,0 +1,2 @@
+# TrustKernel add
+allow untrusted_app tkcore_admin_device:chr_file  { ioctl read write open };

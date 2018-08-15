@@ -1,0 +1,149 @@
+#ifndef __MTK_SYSIMG_FSTYPE
+#define __MTK_SYSIMG_FSTYPE ext4
+#endif
+
+#ifndef __MTK_VNDIMG_FSTYPE
+#define __MTK_VNDIMG_FSTYPE ext4
+#endif
+
+#ifndef __MTK_ODMIMG_FSTYPE
+#define __MTK_ODMIMG_FSTYPE ext4
+#endif
+
+/* Can overwrite FDE setting by defining __MTK_FDE_NO_FORCE and __MTK_FDE_TYPE_FILE in this file */
+/* For example, you can un-comment the following line to disable FDE for all projects in this platform. */
+//#define __MTK_FDE_NO_FORCE
+#ifdef __MTK_FDE_NO_FORCE
+  #define FLAG_FDE_AUTO encryptable
+#else
+  #define FLAG_FDE_AUTO forceencrypt
+#endif
+#ifdef __MTK_FDE_TYPE_FILE
+  #define FLAG_FDE_TYPE fileencryption
+#else
+  #define FLAG_FDE_TYPE
+#endif
+#ifdef __MTK_FDE_TO_FBE
+  #define FLAG_FDE_TYPE forcefdeorfbe
+#endif
+
+#ifdef __TARGET_ENABLE_QUOTA
+  #define FLAG_QUOTA quota
+#else
+  #define FLAG_QUOTA
+#endif
+
+#ifdef __MTK_AB_OTA_UPDATER
+  #define FLAG_SLOT_SELECT slotselect
+  #define SYS_MOUNT_POINT   /
+#ifdef __MTK_SEC_VERITY
+  #define __MTK_SYSIMG_FLAGS wait,verify=/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/metadata,slotselect,recoveryonly
+  #define __MTK_VNDIMG_FLAGS wait,verify=/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/metadata,slotselect
+#else
+  #define __MTK_SYSIMG_FLAGS wait,slotselect,recoveryonly
+  #define __MTK_VNDIMG_FLAGS wait,slotselect
+#endif
+#else
+  #define FLAG_SLOT_SELECT
+  #define SYS_MOUNT_POINT   /system
+#ifdef __MTK_SEC_VERITY
+  #define __MTK_SYSIMG_FLAGS wait,verify=/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/metadata,recoveryonly
+#else
+  #define __MTK_SYSIMG_FLAGS wait,recoveryonly
+#endif
+#endif
+
+#ifdef __MTK_EMMC_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/system     SYS_MOUNT_POINT     __MTK_SYSIMG_FSTYPE     ro      __MTK_SYSIMG_FLAGS
+#ifdef __VENDOR_PARTITION_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/vendor     /vendor             __MTK_VNDIMG_FSTYPE     ro      __MTK_SYSIMG_FLAGS
+#endif
+#ifdef __ODM_PARTITION_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/odm        /odm                __MTK_ODMIMG_FSTYPE     ro      __MTK_SYSIMG_FLAGS
+#endif
+#ifdef __MTK_DTBO_FEATURE
+#ifdef __MTK_AB_OTA_UPDATER
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/odmdtbo       /odmdtbo        emmc  defaults slotselect
+#else
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/odmdtbo       /odmdtbo        emmc  defaults defaults
+#endif
+#endif
+#ifdef __MTK_FDE_TYPE_FILE
+#ifdef __MTK_FDE_TO_FBE
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/userdata   /data        ext4   noatime,nosuid,nodev,noauto_da_alloc,discard               wait,check,FLAG_QUOTA,resize,FLAG_FDE_TYPE=/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/metadata
+#else
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/userdata   /data        ext4   noatime,nosuid,nodev,noauto_da_alloc,discard               wait,check,FLAG_QUOTA,resize,FLAG_FDE_TYPE=aes-256-xts
+#endif
+#else
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/userdata   /data        ext4   noatime,nosuid,nodev,noauto_da_alloc,discard               wait,check,FLAG_QUOTA,resize,FLAG_FDE_AUTO=/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/metadata,FLAG_FDE_TYPE
+#endif
+
+#ifdef __TRUSTKERNEL_TEE_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/protect1   /vendor/protect_f   ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc   wait,check,formattable
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/protect2   /vendor/protect_s   ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc   wait,check,formattable
+#endif
+
+#ifndef __MTK_AB_OTA_UPDATER
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/cache      /cache       ext4   noatime,nosuid,nodev,noauto_da_alloc,discard               wait,check
+#endif
+
+#ifdef __PERSIST_PARTITION_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/persist    /vendor/persist     ext4   noatime,nosuid,nodev,noauto_da_alloc,commit=1,nodelalloc   wait,check,autoformat
+#endif
+#elif defined(__MTK_FTL_SUPPORT)
+/dev/block/mt_ftl_blk0_0     /system      ext4    ro                                             wait,verify
+/dev/block/mt_ftl_blk1_0     /data        ext4    noatime,nosuid,nodev,noauto_da_alloc           wait,resize,forceencrypt=footer
+ubi@cache                    /cache       ubifs   noatime,nosuid,nodev                           wait
+#else
+ubi@userdata   /data        ubifs   noatime,nosuid,nodev  wait
+ubi@system     /system      ubifs   ro                          wait
+ubi@cache      /cache       ubifs   nosuid,nodev                wait
+#endif
+
+/devices/soc/11240000.mmc*  auto      vfat      defaults        voldmanaged=sdcard1:auto,encryptable=userdata
+/devices/platform/mt_usb*   auto      vfat      defaults        voldmanaged=usbotg:auto
+/devices/soc/11270000.usb*  auto      vfat      defaults        voldmanaged=usbotg:auto
+
+#ifdef __MTK_FACTORY_RESET_PROTECTION_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/frp    /persistent     emmc  defaults
+#endif
+
+#ifdef __MTK_EMMC_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/nvram         /nvram          emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/proinfo       /proinfo        emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/lk            /bootloader     emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/lk2           /bootloader2    emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/para          /misc           emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/boot          /boot           emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/recovery      /recovery       emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/logo          /logo           emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/expdb         /expdb          emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/secro         /secro          emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/seccfg        /seccfg         emmc  defaults defaults
+#if (defined(__MTK_TEE_SUPPORT) || defined(__MTK_ATF_SUPPORT))
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/tee1          /tee1           emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/tee2          /tee2           emmc  defaults defaults
+#endif
+#ifdef __KB_DKB_PARTITION_SUPPORT
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/kb            /kb             emmc  defaults defaults
+/dev/block/platform/mtk-msdc.0/11230000.MSDC0/by-name/dkb           /dkb            emmc  defaults defaults
+#endif
+#else
+/mtd@nvram         /nvram          mtd  defaults defaults
+/mtd@proinfo       /proinfo        mtd  defaults defaults
+/mtd@lk            /bootloader     mtd  defaults defaults
+/mtd@misc          /misc           mtd  defaults defaults
+/mtd@boot          /boot           mtd  defaults defaults
+/mtd@recovery      /recovery       mtd  defaults defaults
+/mtd@logo          /logo           mtd  defaults defaults
+/mtd@expdb         /expdb          mtd  defaults defaults
+/mtd@secro         /secro          mtd  defaults defaults
+/mtd@seccfg        /seccfg         mtd  defaults defaults
+#if (defined(__MTK_TEE_SUPPORT) || defined(__MTK_ATF_SUPPORT))
+/mtd@tee1          /tee1           mtd  defaults defaults
+/mtd@tee2          /tee2           mtd  defaults defaults
+#endif
+
+#endif
+
+
